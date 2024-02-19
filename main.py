@@ -208,6 +208,11 @@ def get_player_from_name(name):
         if simplify_string(player.get_name()) == simplify_string(name):
             return player
 
+def get_room_from_id(id):
+    for room in roomdata.values():
+        if room.get_id() == id:
+            return room
+
 def get_room_from_name(name):
     for room in roomdata.values():
         if simplify_string(room.get_name()) == simplify_string(name):
@@ -252,15 +257,11 @@ async def take(interaction: discord.Interaction, item_name: str):
     id = interaction.user.id
     channel_id = interaction.channel_id
     player = get_player_from_id(id)
-    currRoom = None
+    currRoom = get_room_from_id(channel_id)
 
     if player == None or not player.get_name() in playerdata.keys():
         await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
         return
-
-    for room in roomdata.values():
-        if room.get_id() == channel_id:
-            currRoom = room
 
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -284,15 +285,11 @@ async def drop(interaction: discord.Interaction, item_name: str):
     id = interaction.user.id
     channel_id = interaction.channel_id
     player = get_player_from_id(id)
-    currRoom = None
+    currRoom = get_room_from_id(channel_id)
 
     if player == None or not player.get_name() in playerdata.keys():
         await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
         return
-
-    for room in roomdata.values():
-        if room.get_id() == channel_id:
-            currRoom = room
 
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -312,12 +309,8 @@ async def drop(interaction: discord.Interaction, item_name: str):
 
 @client.tree.command(name = "items", description = "List all of the items in the current room.", guild=GUILD)
 async def items(interaction: discord.Interaction):
-    id = interaction.channel_id
-    currRoom = None
-
-    for room in roomdata.values():
-        if room.get_id() == id:
-            currRoom = room
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
 
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -339,14 +332,10 @@ async def items(interaction: discord.Interaction):
 @client.tree.command(name = "lookitem", description = "Get the description of a specific item in the current room.", guild=GUILD)
 @app_commands.describe(item_name = "The name of the item you wish to look at.")
 async def lookitem(interaction: discord.Interaction, item_name: str):
-    id = interaction.channel_id
+    channel_id = interaction.channel_id
     player_id = interaction.user.id
     player = get_player_from_id(player_id)
-    currRoom = None
-
-    for room in roomdata.values():
-        if room.get_id() == id:
-            currRoom = room
+    currRoom = get_room_from_id(channel_id)
 
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -380,12 +369,8 @@ async def lookitem(interaction: discord.Interaction, item_name: str):
 
 @client.tree.command(name = "objects", description = "List all of the objects in the current room.", guild=GUILD)
 async def objects(interaction: discord.Interaction):
-    id = interaction.channel_id
-    currRoom = None
-
-    for room in roomdata.values():
-        if room.get_id() == id:
-            currRoom = room
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
 
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -407,14 +392,10 @@ async def objects(interaction: discord.Interaction):
 @client.tree.command(name = "lookobject", description = "Get the description of a specific object in the current room.", guild=GUILD)
 @app_commands.describe(object_name = "The name of the object you wish to look at.")
 async def lookitem(interaction: discord.Interaction, object_name: str):
-    id = interaction.channel_id
+    channel_id = interaction.channel_id
     player_id = interaction.user.id
     player = get_player_from_id(player_id)
-    currRoom = None
-
-    for room in roomdata.values():
-        if room.get_id() == id:
-            currRoom = room
+    currRoom = get_room_from_id(channel_id)
 
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -585,12 +566,8 @@ async def goto(interaction: discord.Interaction, room_name: str):
 
 @client.tree.command(name = "exits", description = "List all locations that are connected to your current room.")
 async def exits(interaction: discord.Interaction):
-    id = interaction.channel_id
-    currRoom = None
-
-    for room in roomdata.values():
-        if room.get_id() == id:
-            currRoom = room
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
     
     if currRoom is None:
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
@@ -648,6 +625,29 @@ async def lookplayer(interaction: discord.Interaction, player_name: str):
 
     await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "`" + player.get_desc() + "`")
     return
+
+@client.tree.command(name = "players", description = "List all players in the current room.")
+async def players(interaction: discord.Interaction):
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    playerList = []
+    for player in playerdata.values():
+        currPlayer = ''
+        if player.get_room().get_name() == currRoom.get_name():
+            currPlayer = player.get_name()
+            playerList.append("`" + currPlayer + "`")
+
+    if len(playerList) == 0:
+        await interaction.response.send_message("No players are currently in `" + currRoom.get_name() + "`.")
+        return
+
+    allPlayers = ", ".join(playerList)
+    await interaction.response.send_message("Players currently in `" + currRoom.get_name() + "`: \n" + allPlayers)
 
 # # # # # # # # # # # # # # # # #  #
 #          ADMIN COMMANDS          #
@@ -872,9 +872,9 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
     
     if prevChannel is not None:
         await prevChannel.send("`" + player.get_name() + "` was dragged to `" + room.get_name() + "`.")
-        await channel.send("`" + player_name + "` entered from `" + prevRoom.get_name() + "`.")
+        await channel.send("`" + player.get_name() + "` entered from `" + prevRoom.get_name() + "`.")
     else:
-        await channel.send("`" + player_name + "` entered.")
+        await channel.send("`" + player.get_name() + "` entered.")
 
     if prevChannel is not None:
         await prevChannel.set_permissions(user, read_messages = False)
