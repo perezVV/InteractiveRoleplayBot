@@ -9,6 +9,8 @@ Currently, this bot is a major work in progress being strewn together whenever I
 
 Ideally, I'd like to put my time and effort into polishing the code once I'm finished implementing all the features.
 
+A guide on how to use it on your own server, as well as how to make use of its features, should be here eventually.
+
 Thanks for stopping by.
 
 -todo
