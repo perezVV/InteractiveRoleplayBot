@@ -151,6 +151,11 @@ class Player:
     
     def edit_desc(self, desc: str):
         self.desc = desc
+        return
+
+    def del_item(self, item: Item):
+        self.playerItems.remove(item)
+        return
 
 try:
     playerdata_in = open('playerdata.pickle', 'rb')
@@ -272,7 +277,39 @@ async def take(interaction: discord.Interaction, item_name: str):
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
-        
+
+@client.tree.command(name = "drop", description = "Drop an item from your inventory into the room.", guild=GUILD)
+@app_commands.describe(item_name = "The item you wish to drop.")
+async def drop(interaction: discord.Interaction, item_name: str):
+    id = interaction.user.id
+    channel_id = interaction.channel_id
+    player = get_player_from_id(id)
+    currRoom = None
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    for room in roomdata.values():
+        if room.get_id() == channel_id:
+            currRoom = room
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    itemList = player.get_items()
+
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            player.del_item(item)
+            currRoom.add_item(item)
+            save()
+            await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "`")
+            return
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+
 @client.tree.command(name = "items", description = "List all of the items in the current room.", guild=GUILD)
 async def items(interaction: discord.Interaction):
     id = interaction.channel_id
