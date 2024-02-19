@@ -22,10 +22,12 @@ class Item:
         return self.desc
 
 class Object:
-    def __init__(self, name: str, isContainer: bool, desc: str = ''):
+    def __init__(self, name: str, isContainer: bool, isLocked: bool, keyName: str = '', desc: str = ''):
         self.name = name
         self.desc = desc
         self.isContainer = isContainer
+        self.isLocked = isLocked
+        self.keyName = keyName
         self.objItems = []
 
     def get_name(self):
@@ -37,8 +39,18 @@ class Object:
     def get_items(self):
         return self.objItems
 
-    def switch_state(self):
-        self.isContainer = not self.isContainer
+    def get_locked_state(self):
+        return self.isLocked
+    
+    def get_container_state(self):
+        return self.isContainer
+
+    def switch_locked_state(self, locked: bool):
+        self.isLocked = locked
+        return
+
+    def switch_container_state(self, contianer: bool):
+        self.isContainer = bool
         return
 
     def add_item(self, item: Item):
@@ -413,7 +425,7 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
             searchedObj = obj
     
     if searchedObj is None:
-        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the items in the current room.")
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
         return
     
     if player is not None:
@@ -428,6 +440,149 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
         return
     
     await interaction.response.send_message("`" + searchedObj.get_name() + "`:\n" + "`" + searchedObj.get_desc() + "`")
+
+@client.tree.command(name = "contents", description = "List all of the items inside of an object.")
+@app_commands.describe(object_name = "The name of the object you wish to look inside of.")
+async def contents(interaction: discord.Interaction, object_name: str):
+    channel_id = interaction.channel_id
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    currRoom = get_room_from_id(channel_id)
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+    
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
+        return
+    
+    if not searchedObj.get_container_state():
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is not a container.")
+        return
+    
+    if searchedObj.get_locked_state():
+        if player is not None:
+            await interaction.response.send_message("`" + player.get_name() + "` tried to look inside of the object `" + searchedObj.get_name() + "`, but it was locked.")
+            return
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is locked.")
+        return
+    
+    itemList = searchedObj.get_items()
+    if len(itemList) == 0:
+        if player is not None:
+            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "`:\nNo items could be found.")
+            return
+        await interaction.response.send_message("No items could be found inside of `" + searchedObj.get_name() + "`.")
+        return
+    
+    itemNames = []
+    for item in itemList:
+        itemNames.append("`" + item.get_name() + "`")
+        
+    allItems = ', '.join(itemNames)
+    if player is not None:
+        await interaction.response.send_message("`" + player.get_name() + "` looked inside of `" + searchedObj.get_name() + "`. Items found:\n" + allItems)
+        return
+    await interaction.response.send_message("Items found inside of `" + searchedObj.get_name() + "`:\n" + allItems)
+
+@client.tree.command(name = "takefrom", description = "Take an item from an object in the room.", guild=GUILD)
+@app_commands.describe(object_name = "The object you wish to take an item from.")
+@app_commands.describe(item_name = "The item you wish to take.")
+async def take(interaction: discord.Interaction, object_name: str, item_name: str):
+    id = interaction.user.id
+    channel_id = interaction.channel_id
+    player = get_player_from_id(id)
+    currRoom = get_room_from_id(channel_id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
+        return
+    
+    if not searchedObj.get_container_state():
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is not a container.")
+        return
+    
+    if searchedObj.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to take an item from the object `" + searchedObj.get_name() + "`, but it was locked.")
+        return
+
+    itemList = searchedObj.get_items()
+
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            player.add_item(item)
+            searchedObj.del_item(item)
+            save()
+            await interaction.response.send_message("`" + player.get_name() + "` took `" + item.get_name() + "` from `" + searchedObj.get_name() + "`.")
+            return
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
+
+
+@client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
+@app_commands.describe(object_name = "The object you wish to drop the item into.")
+@app_commands.describe(item_name = "The item you wish to drop.")
+async def drop(interaction: discord.Interaction, object_name: str, item_name: str):
+    id = interaction.user.id
+    channel_id = interaction.channel_id
+    player = get_player_from_id(id)
+    currRoom = get_room_from_id(channel_id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
+        return
+    
+    if not searchedObj.get_container_state():
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is not a container.")
+        return
+    
+    if searchedObj.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to drop an item inside of the object `" + searchedObj.get_name() + "`, but it was locked.")
+        return
+
+    itemList = player.get_items()
+
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            player.del_item(item)
+            searchedObj.add_item(item)
+            save()
+            await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "` into `" + searchedObj.get_name() + "`.")
+            return
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
 
 @client.tree.command(name = "inventory", description = "List all of the items in your inventory.")
 async def inv(interaction: discord.Interaction):
@@ -925,8 +1080,10 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
 @app_commands.describe(room_name = "The room you wish to add the object to.")
 @app_commands.describe(object_name = "The name of the object you wish to add to the room.")
 @app_commands.describe(is_container = "True or false; whether or not you wish the object to be able to store items.")
+@app_commands.describe(is_locked = "True or false; whether or not you wish the object to be locked.")
+@app_commands.describe(key_name = "The name of the item you wish to unlock the object.")
 @app_commands.describe(desc = "The description of the object you wish to add to the room.")
-async def addobject(interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, desc: str = ''):
+async def addobject(interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', desc: str = ''):
 
     room = get_room_from_name(room_name)
 
@@ -934,7 +1091,7 @@ async def addobject(interaction: discord.Interaction, room_name: str, object_nam
         await interaction.response.send_message("Room `" + room_name + "` could not be found. Did you mistype? Please use `/listrooms` to see all current rooms.")
         return
     
-    object: Object = Object(object_name, is_container, desc)
+    object: Object = Object(object_name, is_container, is_locked, key_name, desc)
     room.add_object(object)
 
     save()
