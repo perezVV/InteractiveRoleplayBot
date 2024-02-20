@@ -241,29 +241,6 @@ class Player:
         return
 #endregion
 #endregion
-
-#region Load/create pickle data
-try:
-    playerdata_in = open('playerdata.pickle', 'rb')
-    playerdata = pickle.load(playerdata_in)
-except:
-    print('No player data found; creating player data file.')
-    playerdata = {}
-    playerdata_out = open('playerdata.pickle', 'wb')
-    pickle.dump(playerdata, playerdata_out)
-    playerdata_out.close()
-
-try:
-    roomdata_in = open('roomdata.pickle', 'rb')
-    roomdata = pickle.load(roomdata_in)
-except:
-    print('No room data found; creating room data file.')
-    roomdata = {}
-    roomdata_out = open('roomdata.pickle', 'wb')
-    pickle.dump(roomdata, roomdata_out)
-    roomdata_out.close()
-#endregion
-
 #region Methods
 #region Save
 def save():
@@ -281,7 +258,6 @@ def simplify_string(str):
     str = str.lower()
     return str
 #endregion
-
 #region Get Player methods
 #region Get player name from ID
 def get_player_name(id):
@@ -304,7 +280,6 @@ def get_player_from_name(name):
             return player
 #endregion
 #endregion
-
 #region Get Room methods
 #region Get room from ID
 def get_room_from_id(id):
@@ -319,11 +294,20 @@ def get_room_from_name(name):
             return room
 #endregion
 #endregion
-#endregion
-
 #region Start bot
 def configure():
     load_dotenv()
+
+def data(file):
+    try:
+        with open(file, 'rb') as f:
+            datafile = pickle.load(f)
+    except FileNotFoundError:
+        print(f'No {file} found; creating data file.')
+        datafile = {}
+        with open(file, 'wb') as f:
+            datafile = pickle.dump(datafile, f)
+    return datafile
 
 GUILD = discord.Object(id=int(os.getenv('guild_id')))
 
@@ -338,11 +322,14 @@ class Client(discord.Client):
 
 intents = discord.Intents.all()
 client = Client(intents=intents)
+playerdata = data('playerdata.pickle')
+roomdata = data('roomdata.pickle')
 
 @client.event
 async def on_ready():
     configure()
     print(f'Logged on as {client.user}!')
+#endregion
 #endregion
 #endregion
 
