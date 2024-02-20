@@ -87,6 +87,10 @@ class Object:
         self.name = name
         return
 
+    def edit_key_name(self, keyName: str):
+        self.keyName = keyName
+        return
+
     def edit_desc(self, desc: str):
         self.desc = desc
         return
