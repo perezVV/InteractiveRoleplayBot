@@ -436,17 +436,25 @@ async def lookitem(interaction: discord.Interaction, item_name: str):
     
     if player is not None:
         if searchedItem.get_desc() == '':
-            await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "Item has no description.")
             return
         else:
-            await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "`" + searchedItem.get_desc() + "`")
         return
     
     if searchedItem.get_desc() == '':
-        await interaction.response.send_message("`" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+        await interaction.response.send_message("`" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "Item has no description.")
         return
 
-    await interaction.response.send_message("`" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
+    await interaction.response.send_message("`" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "`" + searchedItem.get_desc() + "`")
 #endregion
 #region /objects
 @client.tree.command(name = "objects", description = "List all of the objects in the current room.", guild=GUILD)
@@ -613,16 +621,24 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
     
     if player is not None:
         if searchedObj.get_desc() == '':
-            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" + "Object has no description.")
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
+                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
+                                                    + "`\n" + "Object has no description.")
             return
-        await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" + "`" + searchedObj.get_desc() + "`")
+        await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
+                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
+                                                    + "`\n" + "`" + searchedObj.get_desc() + "`")
         return
     
     if searchedObj.get_desc() == '':
-        await interaction.response.send_message("``" + searchedObj.get_name() + "`:\n" + "Object has no description.")
+        await interaction.response.send_message("``" + searchedObj.get_name() + "`:\n" 
+                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
+                                                    + "`\n" + "Object has no description.")
         return
     
-    await interaction.response.send_message("`" + searchedObj.get_name() + "`:\n" + "`" + searchedObj.get_desc() + "`")
+    await interaction.response.send_message("`" + searchedObj.get_name() + "`:\n" 
+                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
+                                                    + "`\n" + "`" + searchedObj.get_desc() + "`")
 #endregion
 #region /contents
 @client.tree.command(name = "contents", description = "List all of the items inside of an object.")
@@ -723,17 +739,25 @@ async def lookinside(interaction: discord.Interaction, object_name: str, item_na
     
     if player is not None:
         if searchedItem.get_desc() == '':
-            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "Item has no description.")
             return
         else:
-            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
+            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "`" + searchedItem.get_desc() + "`")
             return
     
     if searchedItem.get_desc() == '':
-        await interaction.response.send_message("Looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+        await interaction.response.send_message("Looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "Item has no description.")
         return
     
-    await interaction.response.send_message("Looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
+    await interaction.response.send_message("Looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "`" + searchedItem.get_desc() + "`")
 #endregion
 #region /takefrom
 @client.tree.command(name = "takefrom", description = "Take an item from an object in the room.", guild=GUILD)
@@ -879,10 +903,14 @@ async def lookitem(interaction: discord.Interaction, item_name: str):
         return
     
     if searchedItem.get_desc() == '':
-        await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" + "Item has no description.")
+        await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "Item has no description.")
         return
 
-    await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" + "`" + searchedItem.get_desc() + "`")
+    await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" 
+                                                    + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
+                                                    + "`\n" + "`" + searchedItem.get_desc() + "`")
 #endregion
 #region /goto
 @client.tree.command(name = "goto", description = "Move to the room that you specify.")
