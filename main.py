@@ -5,11 +5,8 @@ from dotenv import load_dotenv
 import os
 import pickle
 
-def configure():
-    load_dotenv()
-
-GUILD = discord.Object(id=int(os.getenv('guild_id')))
-
+#region Classes
+#region Item
 class Item:
     def __init__(self, name: str, desc: str = ''):
         self.name = name
@@ -20,7 +17,8 @@ class Item:
     
     def get_desc(self):
         return self.desc
-
+#endregion
+#region Object
 class Object:
     def __init__(self, name: str, isContainer: bool, isLocked: bool, keyName: str = '', desc: str = ''):
         self.name = name
@@ -60,9 +58,8 @@ class Object:
     def del_item(self, item: Item):
         self.objItems.remove(item)
         return
-
-
-
+#endregion
+#region Exit
 class Exit:
     def __init__(self, room1: str, room2: str):
         self.room1 = room1
@@ -73,7 +70,8 @@ class Exit:
     
     def get_room2(self):
         return self.room2
-
+#endregion
+#region Room
 class Room:
     def __init__(self, name: str, id: int, desc: str = ''):
         self.name = name
@@ -128,8 +126,8 @@ class Room:
     def del_exit(self, exit: Exit):
         self.roomExits.remove(exit)
         return
-
-
+#endregion
+#region Player
 class Player:
     def __init__(self, name: str, id: int, desc: str = ''):
         self.name = name
@@ -168,7 +166,10 @@ class Player:
     def del_item(self, item: Item):
         self.playerItems.remove(item)
         return
+#endregion
+#endregion
 
+#region Load/create pickle data
 try:
     playerdata_in = open('playerdata.pickle', 'rb')
     playerdata = pickle.load(playerdata_in)
@@ -188,7 +189,10 @@ except:
     roomdata_out = open('roomdata.pickle', 'wb')
     pickle.dump(roomdata, roomdata_out)
     roomdata_out.close()
+#endregion
 
+#region Methods
+#region Save
 def save():
     playerdata_out = open('playerdata.pickle', 'wb')
     pickle.dump(playerdata, playerdata_out)
@@ -197,38 +201,58 @@ def save():
     roomdata_out = open('roomdata.pickle', 'wb')
     pickle.dump(roomdata, roomdata_out)
     roomdata_out.close()
-
+#endregion
+#region Simplify string
 def simplify_string(str):
     str = str.replace(' ', '')
     str = str.lower()
     return str
+#endregion
 
+#region Get Player methods
+#region Get player name from ID
 def get_player_name(id):
     name = ''
     for player in playerdata.values():
         if player.get_id() == id:
             name = player.name
     return name
-
+#endregion
+#region Get player from ID
 def get_player_from_id(id):
     for player in playerdata.values():
         if player.get_id() == id:
             return player
-        
+#endregion
+#region Get player from name
 def get_player_from_name(name):
     for player in playerdata.values():
         if simplify_string(player.get_name()) == simplify_string(name):
             return player
+#endregion
+#endregion
 
+#region Get Room methods
+#region Get room from ID
 def get_room_from_id(id):
     for room in roomdata.values():
         if room.get_id() == id:
             return room
-
+#endregion
+#region Get room from name
 def get_room_from_name(name):
     for room in roomdata.values():
         if simplify_string(room.get_name()) == simplify_string(name):
             return room
+#endregion
+#endregion
+#endregion
+
+#region Start bot
+def configure():
+    load_dotenv()
+
+GUILD = discord.Object(id=int(os.getenv('guild_id')))
 
 class Client(discord.Client):
     def __init__(self, *, intents:discord.Intents):
@@ -246,13 +270,16 @@ client = Client(intents=intents)
 async def on_ready():
     configure()
     print(f'Logged on as {client.user}!')
+#endregion
 
-
-
-# # # # # # # # # # # # # # # # # # #
-#          PLAYER COMMANDS          #
-# # # # # # # # # # # # # # # # # # #
+#####################################################
+##                                                 ##
+##                 PLAYER COMMANDS                 ##
+##                                                 ##
+#####################################################
     
+#region Player Commands
+#region /desc
 @client.tree.command(name = "desc", description = "Get the room's description.", guild=GUILD)
 async def desc(interaction: discord.Interaction):
     id = interaction.channel_id
@@ -261,8 +288,8 @@ async def desc(interaction: discord.Interaction):
         await interaction.response.send_message("`Channel description is empty.`")
     else: 
         await interaction.response.send_message("`" + topic + "`")
-
-
+#endregion
+#region /take
 @client.tree.command(name = "take", description = "Take an item from the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to take.")
 async def take(interaction: discord.Interaction, item_name: str):
@@ -290,7 +317,8 @@ async def take(interaction: discord.Interaction, item_name: str):
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
-
+#endregion
+#region /drop
 @client.tree.command(name = "drop", description = "Drop an item from your inventory into the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to drop.")
 async def drop(interaction: discord.Interaction, item_name: str):
@@ -318,7 +346,8 @@ async def drop(interaction: discord.Interaction, item_name: str):
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
-
+#endregion
+#region /items
 @client.tree.command(name = "items", description = "List all of the items in the current room.", guild=GUILD)
 async def items(interaction: discord.Interaction):
     channel_id = interaction.channel_id
@@ -340,7 +369,8 @@ async def items(interaction: discord.Interaction):
 
     allItems = ', '.join(itemNames)
     await interaction.response.send_message("Items found in `" + str(currRoom.get_name()) + "`: \n" + allItems)
-
+#endregion
+#region /lookitem
 @client.tree.command(name = "lookitem", description = "Get the description of a specific item in the current room.", guild=GUILD)
 @app_commands.describe(item_name = "The name of the item you wish to look at.")
 async def lookitem(interaction: discord.Interaction, item_name: str):
@@ -370,15 +400,19 @@ async def lookitem(interaction: discord.Interaction, item_name: str):
     
     if player is not None:
         if searchedItem.get_desc() == '':
-            await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`.")
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`:\n" + "Item has no description.")
             return
         else:
             await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
         return
     
+    if searchedItem.get_desc() == '':
+        await interaction.response.send_message("`" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+        return
+
     await interaction.response.send_message("`" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
-
-
+#endregion
+#region /objects
 @client.tree.command(name = "objects", description = "List all of the objects in the current room.", guild=GUILD)
 async def objects(interaction: discord.Interaction):
     channel_id = interaction.channel_id
@@ -400,7 +434,8 @@ async def objects(interaction: discord.Interaction):
 
     allObjs = ', '.join(objNames)
     await interaction.response.send_message("Objects found in `" + str(currRoom.get_name()) + "`: \n" + allObjs)
-
+#endregion
+#region /lookobject
 @client.tree.command(name = "lookobject", description = "Get the description of a specific object in the current room.", guild=GUILD)
 @app_commands.describe(object_name = "The name of the object you wish to look at.")
 async def lookitem(interaction: discord.Interaction, object_name: str):
@@ -430,17 +465,18 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
     
     if player is not None:
         if searchedObj.get_desc() == '':
-            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`.")
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" + "Object has no description.")
             return
         await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" + "`" + searchedObj.get_desc() + "`")
         return
     
     if searchedObj.get_desc() == '':
-        await interaction.response.send_message("``" + searchedObj.get_name() + "`.")
+        await interaction.response.send_message("``" + searchedObj.get_name() + "`:\n" + "Object has no description.")
         return
     
     await interaction.response.send_message("`" + searchedObj.get_name() + "`:\n" + "`" + searchedObj.get_desc() + "`")
-
+#endregion
+#region /contents
 @client.tree.command(name = "contents", description = "List all of the items inside of an object.")
 @app_commands.describe(object_name = "The name of the object you wish to look inside of.")
 async def contents(interaction: discord.Interaction, object_name: str):
@@ -487,10 +523,71 @@ async def contents(interaction: discord.Interaction, object_name: str):
         
     allItems = ', '.join(itemNames)
     if player is not None:
-        await interaction.response.send_message("`" + player.get_name() + "` looked inside of `" + searchedObj.get_name() + "`. Items found:\n" + allItems)
+        await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "`. Items found:\n" + allItems)
         return
-    await interaction.response.send_message("Items found inside of `" + searchedObj.get_name() + "`:\n" + allItems)
+    await interaction.response.send_message("Items found inside of the object `" + searchedObj.get_name() + "`:\n" + allItems)
+#endregion
+#region /lookinside
+@client.tree.command(name = "lookinside", description = "Get the description of a specific item in an object.", guild=GUILD)
+@app_commands.describe(object_name = "The name of the object you wish to look inside of.")
+@app_commands.describe(item_name = "The name of the item you wish to look at.")
+async def lookinside(interaction: discord.Interaction, object_name: str, item_name: str):
+    channel_id = interaction.channel_id
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    currRoom = get_room_from_id(channel_id)
 
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+    
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
+        return
+    
+    if not searchedObj.get_container_state():
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is not a container.")
+        return
+    
+    if searchedObj.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to look inside of the object `" + searchedObj.get_name() + "`, but it was locked.")
+        return
+
+    itemList = searchedObj.get_items()
+
+    if len(itemList) == 0:
+        await interaction.response.send_message("No items could be found in the object `" + searchedObj.get_name() + "`.")
+        return
+    
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item.get_name()) == simplify_string(item_name):
+            searchedItem = item
+    
+    if searchedItem is None:
+        await interaction.response.send_message("Could not find the item `" + item_name + "`. Please use `/contents` to see a list of all the items in an object.")
+        return
+    
+    if player is not None:
+        if searchedItem.get_desc() == '':
+            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+            return
+        else:
+            await interaction.response.send_message("`" + player.get_name() + "` looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
+            return
+    
+    if searchedItem.get_desc() == '':
+        await interaction.response.send_message("Looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "Item has no description.")
+        return
+    
+    await interaction.response.send_message("Looked inside of the object `" + searchedObj.get_name() + "` at the item `" + searchedItem.get_name() + "`:\n" + "`" + searchedItem.get_desc() + "`")
+#endregion
+#region /takefrom
 @client.tree.command(name = "takefrom", description = "Take an item from an object in the room.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to take an item from.")
 @app_commands.describe(item_name = "The item you wish to take.")
@@ -536,8 +633,8 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
-
-
+#endregion
+#region /drop in
 @client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to drop the item into.")
 @app_commands.describe(item_name = "The item you wish to drop.")
@@ -583,7 +680,8 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
-
+#endregion
+#region /inventory
 @client.tree.command(name = "inventory", description = "List all of the items in your inventory.")
 async def inv(interaction: discord.Interaction):
     id = interaction.user.id
@@ -605,7 +703,8 @@ async def inv(interaction: discord.Interaction):
 
     allItems = ', '.join(itemNames)
     await interaction.response.send_message("Items found in `" + player.get_name() + "`'s inventory: \n" + allItems)
-
+#endregion
+#region /lookinv
 @client.tree.command(name = "lookinv", description = "Get the description of a specific item in your inventory.", guild=GUILD)
 @app_commands.describe(item_name = "The name of the item you wish to look at.")
 async def lookitem(interaction: discord.Interaction, item_name: str):
@@ -632,11 +731,12 @@ async def lookitem(interaction: discord.Interaction, item_name: str):
         return
     
     if searchedItem.get_desc() == '':
-        await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory.")
+        await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" + "Item has no description.")
         return
 
     await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" + "`" + searchedItem.get_desc() + "`")
-
+#endregion
+#region /goto
 @client.tree.command(name = "goto", description = "Move to the room that you specify.")
 @app_commands.describe(room_name = "The name of the room you wish the move to.")
 async def goto(interaction: discord.Interaction, room_name: str):
@@ -717,8 +817,8 @@ async def goto(interaction: discord.Interaction, room_name: str):
         await currChannel.set_permissions(user, read_messages = False)
     
     await channel.set_permissions(user, read_messages = True)
-    
-
+#endregion
+#region /exits
 @client.tree.command(name = "exits", description = "List all locations that are connected to your current room.")
 async def exits(interaction: discord.Interaction):
     channel_id = interaction.channel_id
@@ -745,7 +845,8 @@ async def exits(interaction: discord.Interaction):
     
     allExits = ', '.join(exitNames)
     await interaction.response.send_message("Exits available in `" + currRoom.get_name() + "`: \n" + allExits)
-
+#endregion
+#region /lookplayer
 @client.tree.command(name = "lookplayer", description = "Get the description of a specific player in the current room.")
 @app_commands.describe(player_name = "The list of players in the current room.")
 async def lookplayer(interaction: discord.Interaction, player_name: str):
@@ -769,18 +870,19 @@ async def lookplayer(interaction: discord.Interaction, player_name: str):
 
     if lookingPlayer is player:
         if player.get_desc() == '':
-            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself.")
+            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "Player has no description.")
             return
         await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "`" + lookingPlayer.get_desc() + "`")
         return
 
     if player.get_desc() == '':
-            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`.")
+            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "Player has no description.")
             return
 
     await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "`" + player.get_desc() + "`")
     return
-
+#endregion
+#region /players
 @client.tree.command(name = "players", description = "List all players in the current room.")
 async def players(interaction: discord.Interaction):
     channel_id = interaction.channel_id
@@ -803,11 +905,17 @@ async def players(interaction: discord.Interaction):
 
     allPlayers = ", ".join(playerList)
     await interaction.response.send_message("Players currently in `" + currRoom.get_name() + "`: \n" + allPlayers)
+#endregion
+#endregion
 
-# # # # # # # # # # # # # # # # #  #
-#          ADMIN COMMANDS          #
-# # # # # # # # # # # # # # # # #  #
-        
+#####################################################
+##                                                 ##
+##                  ADMIN COMMANDS                 ##
+##                                                 ##
+#####################################################
+
+#region Admin Commands
+#region /addplayer
 @client.tree.command(name = "addplayer", description = "Add a new player to the experience.", guild=GUILD)
 @app_commands.describe(player_name = "The new player's name.")
 @app_commands.describe(player_id = "The Discord ID of the user that controls the player.")
@@ -835,9 +943,8 @@ async def addplayer(interaction: discord.Interaction, player_name: str, player_i
     playerdata[player_name] = Player(player_name, player_id, desc)
     save()
     await interaction.response.send_message("Player `" + player_name + "` connected to <@" + str(player_id) + ">.")
-
-
-
+#endregion
+#region /delplayer
 @client.tree.command(name = "delplayer", description = "Remove a player from the experience.", guild=GUILD)
 @app_commands.describe(player_name = "The player you wish to remove's name.")
 async def delplayer(interaction: discord.Interaction, player_name: str):
@@ -857,7 +964,8 @@ async def delplayer(interaction: discord.Interaction, player_name: str):
             return
     else:
         await interaction.response.send_message("Could not find player `" + player_name + "`. Did you mistype? Please use `/listplayers` to see all current players.")
-
+#endregion
+#region /listplayers
 @client.tree.command(name = "listplayers", description = "List all the current players added to the experience.", guild=GUILD)
 async def listplayers(interaction: discord.Interaction):
 
@@ -873,7 +981,8 @@ async def listplayers(interaction: discord.Interaction):
         playerList = playerList + "\n" + nextPlayer
 
     await interaction.response.send_message(playerList)
-
+#endregion
+#region /addroom
 @client.tree.command(name = "addroom", description = "Add a room to the experience.")
 @app_commands.describe(room_name = "The name of the room you wish to create.")
 @app_commands.describe(room_id = "The Discord ID of the channel you wish to connect the room to.")
@@ -902,7 +1011,8 @@ async def addroom(interaction: discord.Interaction, room_name: str, room_id: str
     save()
 
     await interaction.response.send_message("Room `" + room_name + "` connected to <#" + str(room_id) + ">.")
-
+#endregion
+#region /delroom
 @client.tree.command(name = "delroom", description = "Remove a room from the experience.")
 @app_commands.describe(room_name = "The name of the room you wish to remove.")
 async def delroom(interaction: discord.Interaction, room_name: str):
@@ -926,8 +1036,8 @@ async def delroom(interaction: discord.Interaction, room_name: str):
     
     else:
         await interaction.response.send_message("Could not find room `" + room_name + "`. Did you mistype? Please use `/listrooms` to see all current rooms.")
-
-
+#endregion
+#region /listrooms
 @client.tree.command(name = "listrooms", description = "List all rooms that have been added to the experience.")
 async def listrooms(interaction: discord.Interaction):
     if len(roomdata) == 0:
@@ -942,8 +1052,8 @@ async def listrooms(interaction: discord.Interaction):
         roomList = roomList + "\n" + nextRoom
     
     await interaction.response.send_message(roomList)
-
-
+#endregion
+#region /addexit
 @client.tree.command(name = "addexit", description = "Add a connection between two rooms.")
 @app_commands.describe(first_room_name = "The first of the two rooms you wish to add a connection between.")
 @app_commands.describe(second_room_name = "The second of the two rooms you wish to add a connection between.")
@@ -973,9 +1083,8 @@ async def addexit(interaction: discord.Interaction, first_room_name: str, second
     save()
 
     await interaction.response.send_message("Connection created between `" + original_room_one + "` and `" + original_room_two + "`.")
-    
-
-
+#endregion 
+#region /drag
 @client.tree.command(name = "drag", description = "Drag a player into a room.")
 @app_commands.describe(player_name = "The name of the player that you wish to drag.")
 @app_commands.describe(room_name = "The name of the room you wish to drag the player into.")
@@ -1035,9 +1144,8 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
         await prevChannel.set_permissions(user, read_messages = False)
     
     await channel.set_permissions(user, read_messages = True)
-    
-    
-
+#endregion 
+#region /findplayer
 @client.tree.command(name = "findplayer", description = "Tells which room a player is currently in.")
 @app_commands.describe(player_name = "The name of the player you wish to find.")
 async def findplayer(interaction: discord.Interaction, player_name: str):
@@ -1057,7 +1165,8 @@ async def findplayer(interaction: discord.Interaction, player_name: str):
         return
 
     await interaction.response.send_message("`" + player.get_name() + "` is currently in `" + room.get_name() + "`.\nJump?: <#" + str(room.get_id()) + ">")
-
+#endregion
+#region /additem
 @client.tree.command(name = "additem", description = "Add an item into a room.", guild=GUILD)
 @app_commands.describe(room_name = "The room you wish to add the item to.")
 @app_commands.describe(item_name = "The name of the item you wish to add to the room.")
@@ -1075,7 +1184,8 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
 
     save()
     await interaction.response.send_message("Added `" + item_name + "` to room `" + room_name + "`.")
-
+#endregion
+#region /addobject
 @client.tree.command(name = "addobject", description = "Add an object into a room.", guild=GUILD)
 @app_commands.describe(room_name = "The room you wish to add the object to.")
 @app_commands.describe(object_name = "The name of the object you wish to add to the room.")
@@ -1096,5 +1206,6 @@ async def addobject(interaction: discord.Interaction, room_name: str, object_nam
 
     save()
     await interaction.response.send_message("Added `" + object_name + "` to room `" + room_name + "`.")
-
+#endregion
+#endregion
 client.run(os.getenv('token'))
