@@ -8,8 +8,10 @@ import pickle
 #region Classes
 #region Item
 class Item:
-    def __init__(self, name: str, desc: str = ''):
+    def __init__(self, name: str, weight: float, wearable: bool, desc: str = ''):
         self.name = name
+        self.weight = weight
+        self.wearable = wearable
         self.desc = desc
     
     def get_name(self):
@@ -17,6 +19,29 @@ class Item:
     
     def get_desc(self):
         return self.desc
+    
+    def get_wearable_state(self):
+        return self.wearable
+    
+    def get_weight(self):
+        return self.weight
+    
+    def edit_name(self, name: str):
+        self.name = name
+        return
+    
+    def edit_desc(self, desc: str):
+        self.desc = desc
+        return
+    
+    def edit_weight(self, weight: float):
+        self.weight = weight
+        return
+    
+    def switch_wearable_state(self, wearable: bool):
+        self.wearable = wearable
+        return
+
 #endregion
 #region Object
 class Object:
@@ -56,6 +81,14 @@ class Object:
 
     def add_item(self, item: Item):
         self.objItems.append(item)
+        return
+
+    def edit_name(self, name: str):
+        self.name = name
+        return
+
+    def edit_desc(self, desc: str):
+        self.desc = desc
         return
 
     def del_item(self, item: Item):
@@ -1285,8 +1318,10 @@ async def findplayer(interaction: discord.Interaction, player_name: str):
 @client.tree.command(name = "additem", description = "Add an item into a room.", guild=GUILD)
 @app_commands.describe(room_name = "The room you wish to add the item to.")
 @app_commands.describe(item_name = "The name of the item you wish to add to the room.")
+@app_commands.describe(weight = "The weight of the item you wish to add to the room.")
+@app_commands.describe(wearable = "True or false; whether you wish the item to be wearable or not.")
 @app_commands.describe(desc = "The description of the item you wish to add to the room.")
-async def additem(interaction: discord.Interaction, room_name: str, item_name: str, desc: str = ''):
+async def additem(interaction: discord.Interaction, room_name: str, item_name: str, weight: float, wearable: bool = False, desc: str = ''):
     
     room = get_room_from_name(room_name)
 
@@ -1294,7 +1329,8 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
         await interaction.response.send_message("Room `" + room_name + "` could not be found. Did you mistype? Please use `/listrooms` to see all current rooms.")
         return
     
-    item: Item = Item(item_name, desc)
+    # self, name: str, weight: float, wearable: bool, desc: str = ''
+    item: Item = Item(item_name, weight, wearable, desc)
     room.add_item(item)
 
     save()
