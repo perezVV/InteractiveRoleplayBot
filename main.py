@@ -5,6 +5,13 @@ from dotenv import load_dotenv
 import os
 import pickle
 
+#####################################################
+##                                                 ##
+##                     INNARDS                     ##
+##                                                 ##
+#####################################################
+
+#region Innards
 #region Classes
 #region Item
 class Item:
@@ -101,15 +108,34 @@ class Object:
 #endregion
 #region Exit
 class Exit:
-    def __init__(self, room1: str, room2: str):
+    def __init__(self, room1: str, room2: str, isLocked: bool, keyName: str = ''):
         self.room1 = room1
         self.room2 = room2
+        self.isLocked = isLocked
+        self.keyName = keyName
 
     def get_room1(self):
         return self.room1
     
     def get_room2(self):
         return self.room2
+    
+    def get_locked_state(self):
+        return self.isLocked
+
+    def get_key_name(self):
+        return self.keyName
+
+    def edit_key_name(self, keyName: str):
+        self.keyName = keyName
+        return
+    
+    def switch_locked_state(self, isLocked: bool):
+        self.isLocked = isLocked
+        return
+    
+
+
 #endregion
 #region Room
 class Room:
@@ -173,6 +199,7 @@ class Player:
         self.name = name
         self.id = id
         self.playerItems = []
+        self.playerClothes = []
         self.room = None
         self.desc = desc
     
@@ -191,10 +218,16 @@ class Player:
     def get_desc(self):
         return self.desc
     
+    def get_clothes(self):
+        return self.playerClothes
+
     def add_item(self, item: Item):
         self.playerItems.append(item)
         return
     
+    def add_clothes(self, clothes: Item):
+        self.playerClothes.append(clothes)
+
     def set_room(self, newRoom: Room):
         self.room = newRoom
         return
@@ -310,6 +343,7 @@ client = Client(intents=intents)
 async def on_ready():
     configure()
     print(f'Logged on as {client.user}!')
+#endregion
 #endregion
 
 #####################################################
@@ -956,17 +990,24 @@ async def goto(interaction: discord.Interaction, room_name: str):
         await interaction.response.send_message("There are no exits in `" + str(currRoom.get_name()) + "`.")
         return
 
+    currExitName = None
     currExit = None
     for exit in exits:
         if exit.get_room1() == currRoom.get_name():
             if simplify_string(exit.get_room2()) == simplify_string(room_name):
-                currExit = exit.get_room2()
+                currExitName = exit.get_room2()
+                currExit = exit
         else:
             if simplify_string(exit.get_room1()) == simplify_string(room_name):
-                currExit = exit.get_room1()
+                currExitName = exit.get_room1()
+                currExit = exit
 
-    if currExit is None:
+    if currExitName is None:
         await interaction.response.send_message("There is no exit to `" + room_name + "` from `" + str(currRoom.get_name()) + "`.")
+        return
+
+    if currExit.get_locked_state():
+        await interaction.response.send_message("The way to `" + currRoom.get_name() + "` from here is locked.")
         return
 
     player.set_room(room)
@@ -1025,6 +1066,130 @@ async def exits(interaction: discord.Interaction):
     
     allExits = ', '.join(exitNames)
     await interaction.response.send_message("Exits available in `" + currRoom.get_name() + "`: \n" + allExits)
+#endregion
+#region /lockexit
+@client.tree.command(name = "lockexit", description = "Locks an exit that is connected to the current room using a key.")
+@app_commands.describe(exit_name = "The name of the exit you wish to lock.")
+@app_commands.describe(key_name = "The name of the item in your inventory that can lock the exit.")
+async def lockexit(interaction: discord.Interaction, exit_name: str, key_name: str):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
+    
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+    
+    exits = currRoom.get_exits()
+
+    if len(exits) == 0:
+        await interaction.response.send_message("No exits could be found.")
+        return
+    
+    searchedExit = None
+    searchedExitName = ''
+    for exit in exits:
+        if simplify_string(exit_name) == simplify_string(exit.get_room1()):
+            searchedExit = exit
+            searchedExitName = exit.get_room1()
+        elif simplify_string(exit_name) == simplify_string(exit.get_room2()):
+            searchedExit = exit
+            searchedExitName = exit.get_room2()
+
+    if searchedExit is None:
+        await interaction.response.send_message("Could not find the exit `" + exit_name + "`. Please use `/exits` to see a list of all exits connected to the current room.")
+        return
+
+    if searchedExit.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to lock the exit `" + searchedExitName + "`, but it was already locked.")
+        return
+
+    searchedItem = None
+    itemList = player.get_items()
+    for item in itemList:
+        if simplify_string(item.get_name()) == simplify_string(key_name):
+            searchedItem = item
+
+    if searchedItem is None:
+        await interaction.response.send_message("Could not find the item `" + key_name + "`. Please use `/inventory` to see a list of all the items in your inventory.")
+        return
+
+    if simplify_string(searchedExit.get_key_name()) == simplify_string(searchedItem.get_name()):
+        searchedExit.switch_locked_state(True)
+        save()
+        await interaction.response.send_message("`" + player.get_name() + "` locked the exit to `" + searchedExitName + "` using `" + item.get_name() + "`.")
+        return
+
+    await interaction.response.send_message("`" + player.get_name() + "` tried to lock the exit `" 
+                                            + searchedExitName + "`, but `" + searchedItem.get_name() + "` was not the key.")
+    return
+#endregion
+#region /unlockexit
+@client.tree.command(name = "unlockexit", description = "Unlocks an exit that is connected to the current room using a key.")
+@app_commands.describe(exit_name = "The name of the exit you wish to unlock.")
+@app_commands.describe(key_name = "The name of the item in your inventory that can unlock the exit.")
+async def unlockexit(interaction: discord.Interaction, exit_name: str, key_name: str):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
+    
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+    
+    exits = currRoom.get_exits()
+
+    if len(exits) == 0:
+        await interaction.response.send_message("No exits could be found.")
+        return
+    
+    searchedExit = None
+    searchedExitName = ''
+    for exit in exits:
+        if simplify_string(exit_name) == simplify_string(exit.get_room1()):
+            searchedExit = exit
+            searchedExitName = exit.get_room1()
+        elif simplify_string(exit_name) == simplify_string(exit.get_room2()):
+            searchedExit = exit
+            searchedExitName = exit.get_room2()
+
+    if searchedExit is None:
+        await interaction.response.send_message("Could not find the exit `" + exit_name + "`. Please use `/exits` to see a list of all exits connected to the current room.")
+        return
+
+    if not searchedExit.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to unlock the exit `" + searchedExitName + "`, but it was already unlocked.")
+        return
+
+    searchedItem = None
+    itemList = player.get_items()
+    for item in itemList:
+        if simplify_string(item.get_name()) == simplify_string(key_name):
+            searchedItem = item
+
+    if searchedItem is None:
+        await interaction.response.send_message("Could not find the item `" + key_name + "`. Please use `/inventory` to see a list of all the items in your inventory.")
+        return
+
+    if simplify_string(searchedExit.get_key_name()) == simplify_string(searchedItem.get_name()):
+        searchedExit.switch_locked_state(False)
+        save()
+        await interaction.response.send_message("`" + player.get_name() + "` unlocked the exit to `" + searchedExitName + "` using `" + item.get_name() + "`.")
+        return
+
+    await interaction.response.send_message("`" + player.get_name() + "` tried to unlock the exit `" 
+                                            + searchedExitName + "`, but `" + searchedItem.get_name() + "` was not the key.")
+    return
 #endregion
 #region /lookplayer
 @client.tree.command(name = "lookplayer", description = "Get the description of a specific player in the current room.")
@@ -1100,6 +1265,7 @@ async def players(interaction: discord.Interaction):
 @app_commands.describe(player_name = "The new player's name.")
 @app_commands.describe(player_id = "The Discord ID of the user that controls the player.")
 @app_commands.describe(desc = "The description of the player you wish to add to the experience.")
+@app_commands.default_permissions()
 async def addplayer(interaction: discord.Interaction, player_name: str, player_id: str, desc: str = ''):
     
     if player_name in playerdata.keys():
@@ -1127,6 +1293,7 @@ async def addplayer(interaction: discord.Interaction, player_name: str, player_i
 #region /delplayer
 @client.tree.command(name = "delplayer", description = "Remove a player from the experience.", guild=GUILD)
 @app_commands.describe(player_name = "The player you wish to remove's name.")
+@app_commands.default_permissions()
 async def delplayer(interaction: discord.Interaction, player_name: str):
 
     simplified_player = simplify_string(player_name)
@@ -1147,6 +1314,7 @@ async def delplayer(interaction: discord.Interaction, player_name: str):
 #endregion
 #region /listplayers
 @client.tree.command(name = "listplayers", description = "List all the current players added to the experience.", guild=GUILD)
+@app_commands.default_permissions()
 async def listplayers(interaction: discord.Interaction):
 
     if len(playerdata) == 0:
@@ -1167,6 +1335,7 @@ async def listplayers(interaction: discord.Interaction):
 @app_commands.describe(room_name = "The name of the room you wish to create.")
 @app_commands.describe(room_id = "The Discord ID of the channel you wish to connect the room to.")
 @app_commands.describe(desc = "The description of the room you wish to add to the experience.")
+@app_commands.default_permissions()
 async def addroom(interaction: discord.Interaction, room_name: str, room_id: str, desc: str = ''):
     
     try:
@@ -1188,6 +1357,8 @@ async def addroom(interaction: discord.Interaction, room_name: str, room_id: str
             return
 
     roomdata[room_name] = Room(room_name, room_id, desc)
+    channel = client.get_channel(int(room_id))
+    await channel.edit(topic=desc)
     save()
 
     await interaction.response.send_message("Room `" + room_name + "` connected to <#" + str(room_id) + ">.")
@@ -1195,6 +1366,7 @@ async def addroom(interaction: discord.Interaction, room_name: str, room_id: str
 #region /delroom
 @client.tree.command(name = "delroom", description = "Remove a room from the experience.")
 @app_commands.describe(room_name = "The name of the room you wish to remove.")
+@app_commands.default_permissions()
 async def delroom(interaction: discord.Interaction, room_name: str):
     simplified_room = simplify_string(room_name)
     simplified_keys = {simplify_string(key): key for key in roomdata.keys()}
@@ -1219,6 +1391,7 @@ async def delroom(interaction: discord.Interaction, room_name: str):
 #endregion
 #region /listrooms
 @client.tree.command(name = "listrooms", description = "List all rooms that have been added to the experience.")
+@app_commands.default_permissions()
 async def listrooms(interaction: discord.Interaction):
     if len(roomdata) == 0:
         await interaction.response.send_message("There are currently no rooms.")
@@ -1237,7 +1410,10 @@ async def listrooms(interaction: discord.Interaction):
 @client.tree.command(name = "addexit", description = "Add a connection between two rooms.")
 @app_commands.describe(first_room_name = "The first of the two rooms you wish to add a connection between.")
 @app_commands.describe(second_room_name = "The second of the two rooms you wish to add a connection between.")
-async def addexit(interaction: discord.Interaction, first_room_name: str, second_room_name: str):
+@app_commands.describe(is_locked = "True or false; whether or not you wish the exit to be locked.")
+@app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the exit.")
+@app_commands.default_permissions()
+async def addexit(interaction: discord.Interaction, first_room_name: str, second_room_name: str, is_locked: bool = False, key_name: str = ''):
 
     simplified_room_one = simplify_string(first_room_name)
     simplified_room_two = simplify_string(second_room_name)
@@ -1255,7 +1431,7 @@ async def addexit(interaction: discord.Interaction, first_room_name: str, second
     original_room_one = simplified_keys[simplified_room_one]
     original_room_two = simplified_keys[simplified_room_two]
 
-    exit: Exit = Exit(original_room_one, original_room_two)
+    exit: Exit = Exit(original_room_one, original_room_two, is_locked, key_name)
 
     room_one.add_exit(exit)
     room_two.add_exit(exit)
@@ -1268,6 +1444,7 @@ async def addexit(interaction: discord.Interaction, first_room_name: str, second
 @client.tree.command(name = "drag", description = "Drag a player into a room.")
 @app_commands.describe(player_name = "The name of the player that you wish to drag.")
 @app_commands.describe(room_name = "The name of the room you wish to drag the player into.")
+@app_commands.default_permissions()
 async def drag(interaction: discord.Interaction, player_name: str, room_name: str):
 
     simplified_player = simplify_string(player_name)
@@ -1328,6 +1505,7 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
 #region /findplayer
 @client.tree.command(name = "findplayer", description = "Tells which room a player is currently in.")
 @app_commands.describe(player_name = "The name of the player you wish to find.")
+@app_commands.default_permissions()
 async def findplayer(interaction: discord.Interaction, player_name: str):
     
     simplified_player = simplify_string(player_name)
@@ -1353,6 +1531,7 @@ async def findplayer(interaction: discord.Interaction, player_name: str):
 @app_commands.describe(weight = "The weight of the item you wish to add to the room.")
 @app_commands.describe(wearable = "True or false; whether you wish the item to be wearable or not.")
 @app_commands.describe(desc = "The description of the item you wish to add to the room.")
+@app_commands.default_permissions()
 async def additem(interaction: discord.Interaction, room_name: str, item_name: str, weight: float, wearable: bool = False, desc: str = ''):
     
     room = get_room_from_name(room_name)
@@ -1374,8 +1553,9 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
 @app_commands.describe(object_name = "The name of the object you wish to add to the room.")
 @app_commands.describe(is_container = "True or false; whether or not you wish the object to be able to store items.")
 @app_commands.describe(is_locked = "True or false; whether or not you wish the object to be locked.")
-@app_commands.describe(key_name = "The name of the item you wish to unlock the object.")
+@app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the object.")
 @app_commands.describe(desc = "The description of the object you wish to add to the room.")
+@app_commands.default_permissions()
 async def addobject(interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', desc: str = ''):
 
     room = get_room_from_name(room_name)
@@ -1391,4 +1571,5 @@ async def addobject(interaction: discord.Interaction, room_name: str, object_nam
     await interaction.response.send_message("Added `" + object_name + "` to room `" + room_name + "`.")
 #endregion
 #endregion
+
 client.run(os.getenv('token'))
