@@ -43,6 +43,9 @@ class Object:
     def get_container_state(self):
         return self.isContainer
 
+    def get_key_name(self):
+        return self.keyName
+
     def switch_locked_state(self, locked: bool):
         self.isLocked = locked
         return
@@ -435,6 +438,118 @@ async def objects(interaction: discord.Interaction):
     allObjs = ', '.join(objNames)
     await interaction.response.send_message("Objects found in `" + str(currRoom.get_name()) + "`: \n" + allObjs)
 #endregion
+#region /lockobject
+@client.tree.command(name = "lockobject", description = "Lock an object in the current room using a key from your inventory.")
+@app_commands.describe(object_name = "The name of the object you wish to lock.")
+@app_commands.describe(key_name = "The name of the item in your inventory that can lock the object.")    
+async def lockobject(interaction: discord.Interaction, object_name: str, key_name: str):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
+
+    if player is None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact an admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
+        return
+    
+    if not searchedObj.get_container_state():
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is not a container.")
+        return
+    
+    if searchedObj.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to lock the object `" + searchedObj.get_name() + "`, but it was already locked.")
+        return
+
+    searchedItem = None
+    
+    itemList = player.get_items()
+    for item in itemList:
+        if simplify_string(item.get_name()) == simplify_string(key_name):
+            searchedItem = item
+
+    if searchedItem is None:
+        await interaction.response.send_message("Could not find the item `" + key_name + "`. Please use `/inventory` to see a list of all the items in your inventory.")
+        return
+
+    if simplify_string(searchedObj.get_key_name()) == simplify_string(searchedItem.get_name()):
+        searchedObj.switch_locked_state(True)
+        save()
+        await interaction.response.send_message("`" + player.get_name() + "` locked the object `" + searchedObj.get_name() + "` using `" + item.get_name() + "`.")
+        return
+
+    await interaction.response.send_message("`" + player.get_name() + "` tried to lock the object `" 
+                                            + searchedObj.get_name() + "`, but `" + searchedItem.get_name() + "` was not the key.")
+    return
+#endregion
+#region /unlockobject
+@client.tree.command(name = "unlockobject", description = "Unlock an object in the current room using a key from your inventory.")
+@app_commands.describe(object_name = "The name of the object you wish to unlock.")
+@app_commands.describe(key_name = "The name of the item in your inventory that can unlock the object.")    
+async def unlockobject(interaction: discord.Interaction, object_name: str, key_name: str):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    channel_id = interaction.channel_id
+    currRoom = get_room_from_id(channel_id)
+
+    if player is None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact an admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
+        return
+    
+    if not searchedObj.get_container_state():
+        await interaction.response.send_message("`" + searchedObj.get_name() + "` is not a container.")
+        return
+    
+    if not searchedObj.get_locked_state():
+        await interaction.response.send_message("`" + player.get_name() + "` tried to unlock the object `" + searchedObj.get_name() + "`, but it was already unlocked.")
+        return
+
+    searchedItem = None
+    
+    itemList = player.get_items()
+    for item in itemList:
+        if simplify_string(item.get_name()) == simplify_string(key_name):
+            searchedItem = item
+
+    if searchedItem is None:
+        await interaction.response.send_message("Could not find the item `" + key_name + "`. Please use `/inventory` to see a list of all the items in your inventory.")
+        return
+
+    if simplify_string(searchedObj.get_key_name()) == simplify_string(searchedItem.get_name()):
+        searchedObj.switch_locked_state(False)
+        save()
+        await interaction.response.send_message("`" + player.get_name() + "` unlocked the object `" + searchedObj.get_name() + "` using `" + item.get_name() + "`.")
+        return
+
+    await interaction.response.send_message("`" + player.get_name() + "` tried to unlock the object `" 
+                                            + searchedObj.get_name() + "`, but `" + searchedItem.get_name() + "` was not the key.")
+    return
+#endregion
 #region /lookobject
 @client.tree.command(name = "lookobject", description = "Get the description of a specific object in the current room.", guild=GUILD)
 @app_commands.describe(object_name = "The name of the object you wish to look at.")
@@ -634,7 +749,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
 #endregion
-#region /drop in
+#region /dropin
 @client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to drop the item into.")
 @app_commands.describe(item_name = "The item you wish to drop.")
