@@ -220,6 +220,12 @@ class Player:
     
     def get_clothes(self):
         return self.playerClothes
+    
+    def get_weight(self):
+        invWeight = 0
+        for item in self.playerItems:
+            invWeight += item.get_weight()
+        return invWeight
 
     def add_item(self, item: Item):
         self.playerItems.append(item)
@@ -298,6 +304,16 @@ def get_room_from_name(name):
             return room
 #endregion
 #endregion
+#region Carry weight
+max_carry_weight = 15
+
+def get_max_carry_weight():
+    return max_carry_weight
+
+def set_max_carry_weight(new_max: int):
+    max_carry_weight = new_max
+    return
+#end_region
 #region Start bot
 def configure():
     load_dotenv()
@@ -336,6 +352,7 @@ async def on_ready():
 #endregion
 #endregion
 #endregion
+#endregion
 
 #####################################################
 ##                                                 ##
@@ -357,7 +374,8 @@ async def desc(interaction: discord.Interaction):
 #region /take
 @client.tree.command(name = "take", description = "Take an item from the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to take.")
-async def take(interaction: discord.Interaction, item_name: str):
+@app_commands.describe(amount = "The amount of that item you wish to take.")
+async def take(interaction: discord.Interaction, item_name: str, amount: int = 0):
     id = interaction.user.id
     channel_id = interaction.channel_id
     player = get_player_from_id(id)
@@ -371,14 +389,55 @@ async def take(interaction: discord.Interaction, item_name: str):
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
         return
 
+    invWeight = player.get_weight()
     itemList = currRoom.get_items()
-    
-    for item in itemList:
-        if simplify_string(item_name) == simplify_string(item.get_name()):
-            player.add_item(item)
-            currRoom.del_item(item)
+
+    if amount == 0 or amount == 1:
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                if (invWeight + item.get_weight()) > max_carry_weight:
+                    await interaction.response.send_message("`" + player.get_name() + "` tried to pick up `" + item.get_name() + "`, but they were carrying too much.")
+                    return
+                player.add_item(item)
+                currRoom.del_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` picked up `" + item.get_name() + "`.")
+                return
+        await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
+        return
+
+    if amount < 0:
+        await interaction.response.send_message("`" + str(amount) + "` is an invalid input; please use a positive number.")
+        return
+
+    if amount != 0 or amount != 1:
+        itemsFound = []
+        searchedItem = None
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                searchedItem = item
+                itemsFound.append(item)
+        if len(itemsFound) == 0:
+            await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
+            return
+        if len(itemsFound) < amount:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
+            return
+        try:
+            newCarryWeight = 0
+            for i in range(amount):
+                newCarryWeight += itemsFound[i].get_weight()
+            if (invWeight + newCarryWeight) > get_max_carry_weight():
+                await interaction.response.send_message("`" + player.get_name() + "` tried to pick up " + str(amount) + " of the item `" + searchedItem.get_name() + "`, but they were carrying too much.")
+                return
+            for i in range(amount):
+                player.add_item(itemsFound[i])
+                currRoom.del_item(itemsFound[i])
             save()
-            await interaction.response.send_message("`" + player.get_name() + "` picked up `" + item.get_name() + "`.")
+            await interaction.response.send_message("`" + player.get_name() + "` picked up " + str(amount) + " of the item `" + searchedItem.get_name() + "`.")
+            return
+        except:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
@@ -387,7 +446,8 @@ async def take(interaction: discord.Interaction, item_name: str):
 
 @client.tree.command(name = "drop", description = "Drop an item from your inventory into the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to drop.")
-async def drop(interaction: discord.Interaction, item_name: str):
+@app_commands.describe(amount = "The amount of that item you wish to take.")
+async def drop(interaction: discord.Interaction, item_name: str, amount: int = 0):
     id = interaction.user.id
     channel_id = interaction.channel_id
     player = get_player_from_id(id)
@@ -403,12 +463,43 @@ async def drop(interaction: discord.Interaction, item_name: str):
 
     itemList = player.get_items()
 
-    for item in itemList:
-        if simplify_string(item_name) == simplify_string(item.get_name()):
-            player.del_item(item)
-            currRoom.add_item(item)
+    if amount == 0 or amount == 1:
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                player.del_item(item)
+                currRoom.add_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "`.")
+                return
+        await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+        return
+
+    if amount < 0:
+        await interaction.response.send_message("`" + str(amount) + "` is an invalid input; please use a positive number.")
+        return
+
+    if amount != 0 or amount != 1:
+        itemsFound = []
+        searchedItem = None
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                searchedItem = item
+                itemsFound.append(item)
+        if len(itemsFound) == 0:
+            await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+            return
+        if len(itemsFound) < amount:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+            return
+        try:
+            for i in range(amount):
+                player.del_item(itemsFound[i])
+                currRoom.add_item(itemsFound[i])
             save()
-            await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "`")
+            await interaction.response.send_message("`" + player.get_name() + "` dropped " + str(amount) + " of the item `" + searchedItem.get_name() + "`.")
+            return
+        except:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
@@ -444,7 +535,7 @@ async def takewear(interaction: discord.Interaction, item_name: str):
                 await interaction.response.send_message("`" + player.get_name() + "` tried to pick up and wear `" + item.get_name() + "`, but it was not a piece of clothing.")
                 return
 
-    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room..")
 #endregion
 #region /undressdrop
 @client.tree.command(name = "undressdrop", description = "Drop a clothing item that you are wearing into the room.", guild=GUILD)
@@ -471,14 +562,14 @@ async def undressdrop(interaction: discord.Interaction, item_name: str):
                 player.del_clothes(item)
                 currRoom.add_item(item)
                 save()
-                await interaction.response.send_message("`" + player.get_name() + "` took off and dropped `" + item.get_name() + "`")
+                await interaction.response.send_message("`" + player.get_name() + "` took off and dropped `" + item.get_name() + "`.")
                 return
             else:
                 await interaction.response.send_message("`" + player.get_name() + "` tried to take off and drop `" + item.get_name() + "`, but it was not a piece of clothing... how are they wearing it?")
                 return
 
 
-    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/lookplayer` to see the clothes you are wearing.")
 #endregion
 #region /wear
 @client.tree.command(name = "wear", description = "Wear a clothing item from your inventory.", guild=GUILD)
@@ -526,14 +617,14 @@ async def undress(interaction: discord.Interaction, item_name: str):
                 player.del_clothes(item)
                 player.add_item(item)
                 save()
-                await interaction.response.send_message("`" + player.get_name() + "` took off `" + item.get_name() + "`")
+                await interaction.response.send_message("`" + player.get_name() + "` took off `" + item.get_name() + "`.")
                 return
             else:
                 await interaction.response.send_message("`" + player.get_name() + "` tried to take off `" + item.get_name() + "`, but it was not a piece of clothing... how are they wearing it?")
                 return
 
 
-    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/lookplayer` to see the clothes you are wearing.")
 #endregion
 #region /items
 @client.tree.command(name = "items", description = "List all of the items in the current room.", guild=GUILD)
@@ -915,7 +1006,8 @@ async def lookinside(interaction: discord.Interaction, object_name: str, item_na
 @client.tree.command(name = "takefrom", description = "Take an item from an object in the room.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to take an item from.")
 @app_commands.describe(item_name = "The item you wish to take.")
-async def take(interaction: discord.Interaction, object_name: str, item_name: str):
+@app_commands.describe(amount = "The amount of that item you wish to take.")
+async def take(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
     id = interaction.user.id
     channel_id = interaction.channel_id
     player = get_player_from_id(id)
@@ -946,14 +1038,55 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
         await interaction.response.send_message("`" + player.get_name() + "` tried to take an item from the object `" + searchedObj.get_name() + "`, but it was locked.")
         return
 
+    invWeight = player.get_weight()
     itemList = searchedObj.get_items()
 
-    for item in itemList:
-        if simplify_string(item_name) == simplify_string(item.get_name()):
-            player.add_item(item)
-            searchedObj.del_item(item)
+    if amount == 0 or amount == 1:
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                if (invWeight + item.get_weight()) > max_carry_weight:
+                    await interaction.response.send_message("`" + player.get_name() + "` tried to pick up `" + item.get_name() + "` from `" + searchedObj.get_name() + "`, but they were carrying too much.")
+                    return
+                player.add_item(item)
+                searchedObj.del_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` took `" + item.get_name() + "` from `" + searchedObj.get_name() + "`.")
+                return
+        await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
+        return
+
+    if amount < 0:
+        await interaction.response.send_message("`" + str(amount) + "` is an invalid input; please use a positive number.")
+        return
+
+    if amount != 0 or amount != 1:
+        itemsFound = []
+        searchedItem = None
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                searchedItem = item
+                itemsFound.append(item)
+        if len(itemsFound) == 0:
+            await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
+            return
+        if len(itemsFound) < amount:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
+            return
+        try:
+            newCarryWeight = 0
+            for i in range(amount):
+                newCarryWeight += itemsFound[i].get_weight()
+            if (invWeight + newCarryWeight) > get_max_carry_weight():
+                await interaction.response.send_message("`" + player.get_name() + "` tried to pick up " + str(amount) + " of the item `" + searchedItem.get_name() + "` from `" + searchedObj.get_name() + ", but they were carrying too much.")
+                return
+            for i in range(amount):
+                player.add_item(itemsFound[i])
+                searchedObj.del_item(itemsFound[i])
             save()
-            await interaction.response.send_message("`" + player.get_name() + "` took `" + item.get_name() + "` from `" + searchedObj.get_name() + "`.")
+            await interaction.response.send_message("`" + player.get_name() + "` picked up " + str(amount) + " of the item `" + searchedItem.get_name() + "` from `" + searchedObj.get_name() + "`.")
+            return
+        except:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
@@ -962,7 +1095,8 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
 @client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to drop the item into.")
 @app_commands.describe(item_name = "The item you wish to drop.")
-async def drop(interaction: discord.Interaction, object_name: str, item_name: str):
+@app_commands.describe(amount = "The amount of that item you wish to drop.")
+async def drop(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
     id = interaction.user.id
     channel_id = interaction.channel_id
     player = get_player_from_id(id)
@@ -995,12 +1129,43 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
 
     itemList = player.get_items()
 
-    for item in itemList:
-        if simplify_string(item_name) == simplify_string(item.get_name()):
-            player.del_item(item)
-            searchedObj.add_item(item)
+    if amount == 0 or amount == 1:
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                player.del_item(item)
+                searchedObj.add_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "` into `" + searchedObj.get_name() + "`.")
+                return
+        await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+        return
+
+    if amount < 0:
+        await interaction.response.send_message("`" + str(amount) + "` is an invalid input; please use a positive number.")
+        return
+
+    if amount != 0 or amount != 1:
+        itemsFound = []
+        searchedItem = None
+        for item in itemList:
+            if simplify_string(item_name) == simplify_string(item.get_name()):
+                searchedItem = item
+                itemsFound.append(item)
+        if len(itemsFound) == 0:
+            await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+            return
+        if len(itemsFound) < amount:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+            return
+        try:
+            for i in range(amount):
+                player.del_item(itemsFound[i])
+                searchedObj.add_item(itemsFound[i])
             save()
-            await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "` into `" + searchedObj.get_name() + "`.")
+            await interaction.response.send_message("`" + player.get_name() + "` dropped " + str(amount) + " of the item `" + searchedItem.get_name() + "` into `" + searchedObj.get_name() + "`.")
+            return
+        except:
+            await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
             return
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
@@ -1686,7 +1851,7 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
     room.add_item(item)
 
     save()
-    await interaction.response.send_message("Added `" + item_name + "` to room `" + room_name + "`.")
+    await interaction.response.send_message("Added `" + item_name + "` to room `" + room.get_name() + "`.")
 #endregion
 #region /addobject
 @client.tree.command(name = "addobject", description = "Add an object into a room.", guild=GUILD)
@@ -1709,7 +1874,7 @@ async def addobject(interaction: discord.Interaction, room_name: str, object_nam
     room.add_object(object)
 
     save()
-    await interaction.response.send_message("Added `" + object_name + "` to room `" + room_name + "`.")
+    await interaction.response.send_message("Added `" + object_name + "` to room `" + room.get_name() + "`.")
 #endregion
 #endregion
 
