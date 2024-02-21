@@ -52,12 +52,13 @@ class Item:
 #endregion
 #region Object
 class Object:
-    def __init__(self, name: str, isContainer: bool, isLocked: bool, keyName: str = '', desc: str = ''):
+    def __init__(self, name: str, isContainer: bool, isLocked: bool, keyName: str = '', storage: int = -1, desc: str = ''):
         self.name = name
         self.desc = desc
         self.isContainer = isContainer
         self.isLocked = isLocked
         self.keyName = keyName
+        self.storage = storage
         self.objItems = []
 
     def get_name(self):
@@ -77,6 +78,9 @@ class Object:
 
     def get_key_name(self):
         return self.keyName
+    
+    def get_storage(self):
+        return self.storage
 
     def switch_locked_state(self, locked: bool):
         self.isLocked = locked
@@ -94,12 +98,20 @@ class Object:
         self.name = name
         return
 
+    def edit_item(self, origItem: Item, item: Item):
+        self.objItems[origItem] = item
+        return
+
     def edit_key_name(self, keyName: str):
         self.keyName = keyName
         return
 
     def edit_desc(self, desc: str):
         self.desc = desc
+        return
+    
+    def set_storage(self, newStorageAmt: int):
+        self.storage = newStorageAmt
         return
 
     def del_item(self, item: Item):
@@ -125,6 +137,14 @@ class Exit:
 
     def get_key_name(self):
         return self.keyName
+
+    def edit_room1(self, newRoom1: str):
+        self.room1 = newRoom1
+        return
+    
+    def edit_room2(self, newRoom2: str):
+        self.room2 = newRoom2
+        return
 
     def edit_key_name(self, keyName: str):
         self.keyName = keyName
@@ -177,6 +197,10 @@ class Room:
         self.roomObjects.append(object)
         return
     
+    def edit_item(self, origItem: Item, item: Item):
+        self.roomItems[origItem] = item
+        return
+
     def edit_desc(self, desc: str):
         self.desc = desc
         return
@@ -238,6 +262,10 @@ class Player:
         self.room = newRoom
         return
     
+    def edit_item(self, origItem: Item, item: Item):
+        self.playerItems[origItem] = item
+        return
+
     def edit_desc(self, desc: str):
         self.desc = desc
         return
@@ -1860,9 +1888,10 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
 @app_commands.describe(is_container = "True or false; whether or not you wish the object to be able to store items.")
 @app_commands.describe(is_locked = "True or false; whether or not you wish the object to be locked.")
 @app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the object.")
+@app_commands.describe(storage = "The max amount of items you wish to be able to store in the object.")
 @app_commands.describe(desc = "The description of the object you wish to add to the room.")
 @app_commands.default_permissions()
-async def addobject(interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', desc: str = ''):
+async def addobject(interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', storage: int = -1, desc: str = ''):
 
     room = get_room_from_name(room_name)
 
@@ -1870,7 +1899,7 @@ async def addobject(interaction: discord.Interaction, room_name: str, object_nam
         await interaction.response.send_message("Room `" + room_name + "` could not be found. Did you mistype? Please use `/listrooms` to see all current rooms.")
         return
     
-    object: Object = Object(object_name, is_container, is_locked, key_name, desc)
+    object: Object = Object(object_name, is_container, is_locked, key_name, storage, desc)
     room.add_object(object)
 
     save()
