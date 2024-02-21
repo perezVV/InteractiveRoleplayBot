@@ -239,6 +239,10 @@ class Player:
     def del_item(self, item: Item):
         self.playerItems.remove(item)
         return
+    
+    def del_clothes(self, item: Item):
+        self.playerClothes.remove(item)
+        return
 #endregion
 #endregion
 #region Methods
@@ -380,6 +384,7 @@ async def take(interaction: discord.Interaction, item_name: str):
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
 #endregion
 #region /drop
+
 @client.tree.command(name = "drop", description = "Drop an item from your inventory into the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to drop.")
 async def drop(interaction: discord.Interaction, item_name: str):
@@ -405,6 +410,128 @@ async def drop(interaction: discord.Interaction, item_name: str):
             save()
             await interaction.response.send_message("`" + player.get_name() + "` dropped `" + item.get_name() + "`")
             return
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+#endregion
+#region /takewear
+@client.tree.command(name = "takewear", description = "Take a clothing item from the room and wear it.", guild=GUILD)
+@app_commands.describe(item_name = "The clothing item you wish to wear.")
+async def takewear(interaction: discord.Interaction, item_name: str):
+    id = interaction.user.id
+    channel_id = interaction.channel_id
+    player = get_player_from_id(id)
+    currRoom = get_room_from_id(channel_id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    itemList = currRoom.get_items()
+    
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            if item.get_wearable_state():
+                player.add_clothes(item)
+                currRoom.del_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` picked up and wore `" + item.get_name() + "`.")
+                return
+            else:
+                await interaction.response.send_message("`" + player.get_name() + "` tried to pick up and wear `" + item.get_name() + "`, but it was not a piece of clothing.")
+                return
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/items` to see a list of items in the current room.")
+#endregion
+#region /undressdrop
+@client.tree.command(name = "undressdrop", description = "Drop a clothing item that you are wearing into the room.", guild=GUILD)
+@app_commands.describe(item_name = "The clothing item you wish to drop.")
+async def undressdrop(interaction: discord.Interaction, item_name: str):
+    id = interaction.user.id
+    channel_id = interaction.channel_id
+    player = get_player_from_id(id)
+    currRoom = get_room_from_id(channel_id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    if currRoom is None:
+        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        return
+
+    itemList = player.get_clothes()
+
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            if item.get_wearable_state():
+                player.del_clothes(item)
+                currRoom.add_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` took off and dropped `" + item.get_name() + "`")
+                return
+            else:
+                await interaction.response.send_message("`" + player.get_name() + "` tried to take off and drop `" + item.get_name() + "`, but it was not a piece of clothing... how are they wearing it?")
+                return
+
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+#endregion
+#region /wear
+@client.tree.command(name = "wear", description = "Wear a clothing item from your inventory.", guild=GUILD)
+@app_commands.describe(item_name = "The clothing item you wish to wear.")
+async def wear(interaction: discord.Interaction, item_name: str):
+    id = interaction.user.id
+    player = get_player_from_id(id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    itemList = player.get_items()
+    
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            if item.get_wearable_state():
+                player.add_clothes(item)
+                player.del_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` put on `" + item.get_name() + "`.")
+                return
+            else:
+                await interaction.response.send_message("`" + player.get_name() + "` tried to wear `" + item.get_name() + "`, but it was not a piece of clothing.")
+                return
+
+    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
+#endregion
+#region /undress
+@client.tree.command(name = "undress", description = "Take off a clothing item and place it into your inventory.", guild=GUILD)
+@app_commands.describe(item_name = "The clothing item you wish to take off.")
+async def undress(interaction: discord.Interaction, item_name: str):
+    id = interaction.user.id
+    player = get_player_from_id(id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+
+    itemList = player.get_clothes()
+
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            if item.get_wearable_state():
+                player.del_clothes(item)
+                player.add_item(item)
+                save()
+                await interaction.response.send_message("`" + player.get_name() + "` took off `" + item.get_name() + "`")
+                return
+            else:
+                await interaction.response.send_message("`" + player.get_name() + "` tried to take off `" + item.get_name() + "`, but it was not a piece of clothing... how are they wearing it?")
+                return
+
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
 #endregion
@@ -1195,24 +1322,51 @@ async def lookplayer(interaction: discord.Interaction, player_name: str):
     if player is None:
         await interaction.response.send_message("Could not find player `" + player_name + "`. Please use `/players` to see a list of all players in the current room.")
         return
-    
+
+    clothesList = player.get_clothes()
+    clothesNames = []
+    for clothing in clothesList:
+        clothesNames.append("`" + clothing.get_name() + "`")
+    allClothes = ', '.join(clothesNames)
+
     if lookingPlayer is None:
-        await interaction.response.send_message("`" + player.get_name() + "`:\n" + "`" + player.get_desc() + "`")
+        if player.get_desc() == '':
+            if len(clothesList) == 0:
+                await interaction.response.send_message("Looked at `" + player.get_name() + "`:\n" + "Wearing: `Nothing`")
+                return
+            await interaction.response.send_message("Looked at `" + player.get_name() + "`:\n" + "Wearing: " + allClothes)
+            return
+        if len(clothesList) == 0:
+            await interaction.response.send_message("Looked at `" + player.get_name() + "`:\n" + "Wearing: `Nothing`\n" + "`" + player.get_desc() + "`")
+            return
+        await interaction.response.send_message("Looked at `" + player.get_name() + "`:\n" + "Wearing: " + allClothes + "\n" + "`" + player.get_desc() + "`")
         return
 
     if lookingPlayer is player:
         if player.get_desc() == '':
-            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "Player has no description.")
+            if len(clothesList) == 0:
+                await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "Wearing: `Nothing`")
+                return
+            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "Wearing: " + allClothes)
             return
-        await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "`" + lookingPlayer.get_desc() + "`")
+        if len(clothesList) == 0:
+            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "Wearing: `Nothing`\n" + "`" + player.get_desc() + "`")
+            return
+        await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at themself:\n" + "Wearing: " + allClothes + "\n" + "`" + player.get_desc() + "`")
         return
 
+
     if player.get_desc() == '':
-            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "Player has no description.")
+            if len(clothesList) == 0:
+                await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "Wearing: `Nothing`")
+                return
+            await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "Wearing: " + allClothes)
             return
 
-    await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "`" + player.get_desc() + "`")
-    return
+    if len(clothesList) == 0:
+        await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "Wearing: `Nothing`\n" + "`" + player.get_desc() + "`")
+        return
+    await interaction.response.send_message("`" + lookingPlayer.get_name() + "` looked at `" + player.get_name() + "`:\n" + "Wearing: " + allClothes + "\n" + "`" + player.get_desc() + "`")
 #endregion
 #region /players
 @client.tree.command(name = "players", description = "List all players in the current room.")
