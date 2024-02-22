@@ -9,7 +9,7 @@ import pickle
 
 #####################################################
 ##                                                 ##
-##                     INNARDS                     ##
+##                PROGRAM INNARDS                  ##
 ##                                                 ##
 #####################################################
 
@@ -405,8 +405,6 @@ async def on_ready():
 ##                 PLAYER COMMANDS                 ##
 ##                                                 ##
 #####################################################
-
-# 
 
 #region Player Commands
 #region /desc
@@ -924,15 +922,20 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
     else:
         is_locked = 'Opened'
 
+    storage_amt = ''
+    if searchedObj.get_storage() == -1:
+        storage_amt = 'Infinite'
+    else:
+        storage_amt = str(searchedObj.get_storage())
     if player is not None:
         if searchedObj.get_container_state():
             if searchedObj.get_desc() == '':
                 await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
-                                                    + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
+                                                    + "Storage: `" + storage_amt + "`\n" + "State: `" + is_locked 
                                                     + "`\n" + "Object has no description.")
                 return
             await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
-                                                    + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
+                                                    + "Storage: `" + storage_amt + "`\n" + "State: `" + is_locked 
                                                     + "`\n" + "`" + searchedObj.get_desc() + "`")
             return
         if searchedObj.get_desc() == '':
@@ -944,11 +947,11 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
     if searchedObj.get_container_state():
         if searchedObj.get_desc() == '':
             await interaction.response.send_message("Looked at the object `" + searchedObj.get_name() + "`:\n" 
-                                                + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
+                                                + "Storage: `" + storage_amt + "`\n" + "State: `" + is_locked 
                                                 + "`\n" + "Object has no description.")
             return
         await interaction.response.send_message("Looked at the object `" + searchedObj.get_name() + "`:\n" 
-                                                + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
+                                                + "Storage: `" + storage_amt + "`\n" + "State: `" + is_locked 
                                                 + "`\n" + "`" + searchedObj.get_desc() + "`")
         return
     
@@ -1166,7 +1169,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
 #endregion
-#region /dropin TODO: check for -1 (for infinite containers)
+#region /dropin
 @client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to drop the item into.")
 @app_commands.describe(item_name = "The item you wish to drop.")
@@ -1209,8 +1212,8 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
     if amount == 0 or amount == 1:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
-                if (len(contentsList) + 1) > maxStorage:
-                    await interaction.response.send_message("`" + player.get_name() + "` tried to drop an item inside of the object `" + searchedObj.get_name() + "`, but it was full.")
+                if (len(contentsList) + 1) > maxStorage and not searchedObj.get_storage() == -1:
+                    await interaction.response.send_message("`" + player.get_name() + "` tried to drop an item inside of the object `" + searchedObj.get_name() + "`, but it could not fit.")
                     return
                 player.del_item(item)
                 searchedObj.add_item(item)
@@ -1241,8 +1244,8 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
             newStorageAmount = 0
             for i in range(amount):
                 newStorageAmount += 1
-            if (len(contentsList) + newStorageAmount) > maxStorage:
-                await interaction.response.send_message("`" + player.get_name() + "` tried to drop " + str(amount) + " items into `" + searchedObj.get_name() + "`, but it was full.")
+            if (len(contentsList) + newStorageAmount) > maxStorage and not searchedObj.get_storage() == -1:
+                await interaction.response.send_message("`" + player.get_name() + "` tried to drop " + str(amount) + " items into `" + searchedObj.get_name() + "`, but it could not fit that much.")
                 return
             for i in range(amount):
                 player.del_item(itemsFound[i])
@@ -1741,6 +1744,7 @@ async def time(interaction: discord.Interaction):
         return
 
     await interaction.response.send_message("`" + current_time + "`")
+#endregion
 #endregion
 
 #####################################################
