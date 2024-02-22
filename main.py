@@ -2,7 +2,9 @@ import discord
 from discord import app_commands
 from discord import AppCommandOptionType
 from dotenv import load_dotenv
+import datetime
 import os
+import random
 import pickle
 
 #####################################################
@@ -244,12 +246,18 @@ class Player:
     
     def get_clothes(self):
         return self.playerClothes
-    
+
     def get_weight(self):
         invWeight = 0
         for item in self.playerItems:
             invWeight += item.get_weight()
         return invWeight
+
+    def get_clothes_weight(self):
+        clothesWeight = 0
+        for clothes in self.playerClothes:
+            clothesWeight += clothes.get_weight()
+        return clothesWeight
 
     def add_item(self, item: Item):
         self.playerItems.append(item)
@@ -332,14 +340,24 @@ def get_room_from_name(name):
             return room
 #endregion
 #endregion
-#region Carry weight
-max_carry_weight = 15
+#region Max weights
+max_carry_weight = 10
+max_wear_weight = 15
 
 def get_max_carry_weight():
     return max_carry_weight
 
 def set_max_carry_weight(new_max: int):
+    global max_carry_weight
     max_carry_weight = new_max
+    return
+
+def get_max_wear_weight():
+    return max_wear_weight
+
+def set_max_wear_weight(new_max: int):
+    global max_wear_weight
+    max_wear_weight = new_max
     return
 #end_region
 #region Start bot
@@ -387,7 +405,9 @@ async def on_ready():
 ##                 PLAYER COMMANDS                 ##
 ##                                                 ##
 #####################################################
-    
+
+# 
+
 #region Player Commands
 #region /desc
 @client.tree.command(name = "desc", description = "Get the room's description.", guild=GUILD)
@@ -549,11 +569,15 @@ async def takewear(interaction: discord.Interaction, item_name: str):
         await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
         return
 
+    clothesWeight = player.get_clothes_weight()
     itemList = currRoom.get_items()
     
     for item in itemList:
         if simplify_string(item_name) == simplify_string(item.get_name()):
             if item.get_wearable_state():
+                if (clothesWeight + item.get_weight()) > max_wear_weight:
+                    await interaction.response.send_message("`" + player.get_name() + "` tried to pick up and wear `" + item.get_name() + "`, but they were wearing too much already.")
+                    return
                 player.add_clothes(item)
                 currRoom.del_item(item)
                 save()
@@ -610,11 +634,15 @@ async def wear(interaction: discord.Interaction, item_name: str):
         await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
         return
 
+    clothesWeight = player.get_clothes_weight()
     itemList = player.get_items()
     
     for item in itemList:
         if simplify_string(item_name) == simplify_string(item.get_name()):
             if item.get_wearable_state():
+                if (clothesWeight + item.get_weight()) > max_wear_weight:
+                    await interaction.response.send_message("`" + player.get_name() + "` tried to pick up and wear `" + item.get_name() + "`, but they were wearing too much already.")
+                    return
                 player.add_clothes(item)
                 player.del_item(item)
                 save()
@@ -890,26 +918,45 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
         await interaction.response.send_message("Could not find the object `" + object_name + "`. Please use `/objects` to see a list of all the objects in the current room.")
         return
     
+    is_locked = ''
+    if searchedObj.get_locked_state():
+        is_locked = 'Locked'
+    else:
+        is_locked = 'Opened'
+
     if player is not None:
-        if searchedObj.get_desc() == '':
-            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
-                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
+        if searchedObj.get_container_state():
+            if searchedObj.get_desc() == '':
+                await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
+                                                    + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
                                                     + "`\n" + "Object has no description.")
-            return
-        await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
-                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
+                return
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" 
+                                                    + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
                                                     + "`\n" + "`" + searchedObj.get_desc() + "`")
+            return
+        if searchedObj.get_desc() == '':
+            await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n" + "Object has no description.")
+            return
+        await interaction.response.send_message("`" + player.get_name() + "` looked at the object `" + searchedObj.get_name() + "`:\n`" + searchedObj.get_desc() + "`")
+        return
+    
+    if searchedObj.get_container_state():
+        if searchedObj.get_desc() == '':
+            await interaction.response.send_message("Looked at the object `" + searchedObj.get_name() + "`:\n" 
+                                                + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
+                                                + "`\n" + "Object has no description.")
+            return
+        await interaction.response.send_message("Looked at the object `" + searchedObj.get_name() + "`:\n" 
+                                                + "Storage: `" + str(searchedObj.get_storage()) + "`\n" + "State: `" + is_locked 
+                                                + "`\n" + "`" + searchedObj.get_desc() + "`")
         return
     
     if searchedObj.get_desc() == '':
-        await interaction.response.send_message("``" + searchedObj.get_name() + "`:\n" 
-                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
-                                                    + "`\n" + "Object has no description.")
+        await interaction.response.send_message("Looked at the object `" + searchedObj.get_name() + "`:\n" + "Object has no description.")
         return
-    
-    await interaction.response.send_message("`" + searchedObj.get_name() + "`:\n" 
-                                                    + "Container?: `" + str(searchedObj.get_container_state()) + "`\n" + "Locked?: `" + str(searchedObj.get_locked_state()) 
-                                                    + "`\n" + "`" + searchedObj.get_desc() + "`")
+    await interaction.response.send_message("Looked at the object `" + searchedObj.get_name() + "`:\n`" + searchedObj.get_desc() + "`")
+    return
 #endregion
 #region /contents
 @client.tree.command(name = "contents", description = "List all of the items inside of an object.")
@@ -1119,7 +1166,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
 
     await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/contents` to see a list of items in an object.")
 #endregion
-#region /dropin
+#region /dropin TODO: check for -1 (for infinite containers)
 @client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
 @app_commands.describe(object_name = "The object you wish to drop the item into.")
 @app_commands.describe(item_name = "The item you wish to drop.")
@@ -1155,11 +1202,16 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
         await interaction.response.send_message("`" + player.get_name() + "` tried to drop an item inside of the object `" + searchedObj.get_name() + "`, but it was locked.")
         return
 
+    maxStorage = searchedObj.get_storage()
+    contentsList = searchedObj.get_items()
     itemList = player.get_items()
 
     if amount == 0 or amount == 1:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
+                if (len(contentsList) + 1) > maxStorage:
+                    await interaction.response.send_message("`" + player.get_name() + "` tried to drop an item inside of the object `" + searchedObj.get_name() + "`, but it was full.")
+                    return
                 player.del_item(item)
                 searchedObj.add_item(item)
                 save()
@@ -1186,6 +1238,12 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
             await interaction.response.send_message("Could not find " + str(amount) + " of the item `" + item_name + "`. Please use `/inventory` to see a list of items in your inventory.")
             return
         try:
+            newStorageAmount = 0
+            for i in range(amount):
+                newStorageAmount += 1
+            if (len(contentsList) + newStorageAmount) > maxStorage:
+                await interaction.response.send_message("`" + player.get_name() + "` tried to drop " + str(amount) + " items into `" + searchedObj.get_name() + "`, but it was full.")
+                return
             for i in range(amount):
                 player.del_item(itemsFound[i])
                 searchedObj.add_item(itemsFound[i])
@@ -1256,6 +1314,65 @@ async def lookitem(interaction: discord.Interaction, item_name: str):
     await interaction.response.send_message("`" + player.get_name() + "` looked at the item `" + searchedItem.get_name() + "` in their inventory:\n" 
                                                     + "Weight: `" + str(searchedItem.get_weight()) + "`\n" + "Wearable?: `" + str(searchedItem.get_wearable_state()) 
                                                     + "`\n" + "`" + searchedItem.get_desc() + "`")
+#endregion
+#region /clothes
+@client.tree.command(name = "clothes", description = "List all of the clothes you are currently wearing.")
+async def clothes(interaction: discord.Interaction):
+    id = interaction.user.id
+    player = get_player_from_id(id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+    
+    playerClothes = player.get_clothes()
+
+    if len(playerClothes) == 0:
+            await interaction.response.send_message("No clothes found on `" + player.get_name() + "`.")
+            return
+
+    clothesNames = []
+    for clothes in playerClothes:
+        clothesNames.append("`" + clothes.get_name() + "`")
+
+    allClothes = ', '.join(clothesNames)
+    await interaction.response.send_message("Clothes found on `" + player.get_name() + "`: \n" + allClothes)
+#endregion
+#region /lookclothes
+@client.tree.command(name = "lookclothes", description = "Get the description of a specific clothing item you are currently wearing.", guild=GUILD)
+@app_commands.describe(clothes_name = "The name of the clothing item you wish to look at.")
+async def lookclothes(interaction: discord.Interaction, clothes_name: str):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+
+    if player == None or not player.get_name() in playerdata.keys():
+        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        return
+    
+    clothesList = player.get_clothes()
+
+    if len(clothesList) == 0:
+        await interaction.response.send_message("No clothes could be found on `" + player.get_name() + "`'.")
+        return
+    
+    searchedClothes = None
+    for clothes in clothesList:
+        if simplify_string(clothes.get_name()) == simplify_string(clothes_name):
+            searchedClothes = clothes
+    
+    if searchedClothes is None:
+        await interaction.response.send_message("Could not find the clothing item `" + clothes_name + "`. Please use `/clothes` to see a list of all the clothes you are currently wearing.")
+        return
+    
+    if searchedClothes.get_desc() == '':
+        await interaction.response.send_message("`" + player.get_name() + "` looked at the clothing item `" + searchedClothes.get_name() + "` they were wearing:\n" 
+                                                    + "Weight: `" + str(searchedClothes.get_weight()) + "`\n" + "Wearable?: `" + str(searchedClothes.get_wearable_state()) 
+                                                    + "`\n" + "Item has no description.")
+        return
+
+    await interaction.response.send_message("`" + player.get_name() + "` looked at the clothing item `" + searchedClothes.get_name() + "` they were wearing:\n" 
+                                                    + "Weight: `" + str(searchedClothes.get_weight()) + "`\n" + "Wearable?: `" + str(searchedClothes.get_wearable_state()) 
+                                                    + "`\n" + "`" + searchedClothes.get_desc() + "`")
 #endregion
 #region /goto
 @client.tree.command(name = "goto", description = "Move to the room that you specify.")
@@ -1585,6 +1702,45 @@ async def players(interaction: discord.Interaction):
     allPlayers = ", ".join(playerList)
     await interaction.response.send_message("Players currently in `" + currRoom.get_name() + "`: \n" + allPlayers)
 #endregion
+#region /roll
+@client.tree.command(name = "roll", description = "Roll for a random number.")
+@app_commands.describe(max_num = "The maximum number for the roll.")
+@app_commands.describe(passing_roll = "Optional; The number that the roll must be more than to be considered a passing roll.")
+async def roll(interaction: discord.Interaction, max_num: int, passing_roll: int = -1):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    rollNum = random.randint(1, max_num)
+    passingString = '.'
+
+    if passing_roll != -1:
+        if rollNum >= passing_roll:
+            passingString = ', attempting to beat **' + str(passing_roll) + '**. Roll **succeeded**!'
+        else:
+            passingString = ', attempting to beat **' + str(passing_roll) + '**. Roll **failed**.'
+
+    if player is not None:
+        await interaction.response.send_message("***" + player.get_name() + "** rolled **" + str(rollNum) + "** out of " + str(max_num) + passingString + "*")
+        return
+    
+    if passing_roll == -1:
+            passingString = ''
+    await interaction.response.send_message("*Rolled **" + str(rollNum) + "** out of " + str(max_num) + passingString + "*")
+    return
+#endregion
+#region /time
+@client.tree.command(name = "time", description = "Check the current time in roleplay.")
+async def time(interaction: discord.Interaction):
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+
+    t = datetime.datetime.now()
+    current_time = t.strftime("%I:%M %p")
+
+    if player is not None:
+        await interaction.response.send_message("***" + player.get_name() + "** checked the time:*\n`" + current_time + "`")
+        return
+
+    await interaction.response.send_message("`" + current_time + "`")
 #endregion
 
 #####################################################
@@ -1888,7 +2044,7 @@ async def additem(interaction: discord.Interaction, room_name: str, item_name: s
 @app_commands.describe(is_container = "True or false; whether or not you wish the object to be able to store items.")
 @app_commands.describe(is_locked = "True or false; whether or not you wish the object to be locked.")
 @app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the object.")
-@app_commands.describe(storage = "The max amount of items you wish to be able to store in the object.")
+@app_commands.describe(storage = "The max amount of items you wish to be able to store in the object. If left blank, there will be no maximum.")
 @app_commands.describe(desc = "The description of the object you wish to add to the room.")
 @app_commands.default_permissions()
 async def addobject(interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', storage: int = -1, desc: str = ''):
