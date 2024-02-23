@@ -598,7 +598,7 @@ async def takewear(interaction: discord.Interaction, item_name: str):
 
     await interaction.response.send_message(f"Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
 #endregion
-#region /undressdrop
+#region /undressdrop FORMATTED
 @client.tree.command(name = "undressdrop", description = "Drop a clothing item that you are wearing into the room.", guild=GUILD)
 @app_commands.describe(item_name = "The clothing item you wish to drop.")
 async def undressdrop(interaction: discord.Interaction, item_name: str):
@@ -608,11 +608,11 @@ async def undressdrop(interaction: discord.Interaction, item_name: str):
     currRoom = get_room_from_id(channel_id)
 
     if player == None or not player.get_name() in playerdata.keys():
-        await interaction.response.send_message("You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        await interaction.response.send_message("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
     if currRoom is None:
-        await interaction.response.send_message("You are not currently in a room. Please contact an admin if you believe this is a mistake.")
+        await interaction.response.send_message("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
 
     itemList = player.get_clothes()
@@ -623,14 +623,14 @@ async def undressdrop(interaction: discord.Interaction, item_name: str):
                 player.del_clothes(item)
                 currRoom.add_item(item)
                 save()
-                await interaction.response.send_message("`" + player.get_name() + "` took off and dropped `" + item.get_name() + "`.")
+                await interaction.response.send_message(f"***{player.get_name()}** took off and dropped the item **{item.get_name()}***.")
                 return
             else:
-                await interaction.response.send_message("`" + player.get_name() + "` tried to take off and drop `" + item.get_name() + "`, but it was not a piece of clothing... how are they wearing it?")
+                await interaction.response.send_message(f"***{player.get_name()}** tried to take off and drop **{item.get_name()}**, but it was not a piece of clothing... how are they wearing it?*")
                 return
 
 
-    await interaction.response.send_message("Could not find `" + item_name + "`. Please use `/lookplayer` to see the clothes you are wearing.")
+    await interaction.response.send_message(f"*Could not find **{item_name}**. Please use `/lookplayer` to see the clothes you are wearing.*")
 #endregion
 #region /wear
 @client.tree.command(name = "wear", description = "Wear a clothing item from your inventory.", guild=GUILD)
