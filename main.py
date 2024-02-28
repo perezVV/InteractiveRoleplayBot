@@ -2201,12 +2201,13 @@ async def findroom(interaction: discord.Interaction, room_name: str):
 
     await interaction.response.send_message(f"`{room.get_name()}`: <#" + str(room.get_id()) + ">")
 #endregion
-#region /additem FORMATTED
+#region /additem TEST FOR WEIGHT/STORAGE
 @client.tree.command(name = "additem", description = "Add an item into the experience.", guild=GUILD)
 @app_commands.choices(container = [
     app_commands.Choice(name = "Room", value = 0),
-    app_commands.Choice(name = "Player", value = 1),
-    app_commands.Choice(name = "Object", value = 2)
+    app_commands.Choice(name = "Player's inventory", value = 1),
+    app_commands.Choice(name = "Player's clothes", value = 2),
+    app_commands.Choice(name = "Object", value = 3)
     ])
 @app_commands.describe(container_name = "The name of the container you wish to add the item to. If an object, be sure to specify a room name.")
 @app_commands.describe(item_name = "The name of the item you wish to add.")
@@ -2228,10 +2229,15 @@ async def additem(interaction: discord.Interaction, container: app_commands.Choi
     
     elif container.value == 1:
         ifNone = f"*Player **{container_name}** could not be found. Please use `/listplayers` to see all current players.*"
-        containerType = "player"
+        containerType = "inventory of"
         containerVar = get_player_from_name(container_name)
 
     elif container.value == 2:
+        ifNone = f"*Player **{container_name}** could not be found. Please use `/listplayers` to see all current players.*"
+        containerType = "clothes of"
+        containerVar = get_player_from_name(container_name)
+
+    elif container.value == 3:
 
         if object_room_name == '':
             await interaction.response.send_message(f"*To add an item to an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
@@ -2257,17 +2263,26 @@ async def additem(interaction: discord.Interaction, container: app_commands.Choi
     
     # self, name: str, weight: float, wearable: bool, desc: str = ''
     item: Item = Item(item_name, weight, wearable, desc)
-    containerVar.add_item(item)
+    
+    if container.value == 2:
+        if not item.get_wearable_state():
+            await interaction.response.send_message(f"Could not add **{item_name}** to **{containerVar.get_name()}**'s clothes: Item must be wearable.")
+            return
+        containerVar.add_clothes(item)
+
+    else:
+        containerVar.add_item(item)
 
     save()
     await interaction.response.send_message(f"*Added the item **{item_name}** to the {containerType} **{containerVar.get_name()}**.*")
 #endregion
-#region /delitem FORMATTED
+#region /delitem
 @client.tree.command(name = "delitem", description = "Delete an item from the experience.", guild=GUILD)
 @app_commands.choices(container = [
     app_commands.Choice(name = "Room", value = 0),
-    app_commands.Choice(name = "Player", value = 1),
-    app_commands.Choice(name = "Object", value = 2)
+    app_commands.Choice(name = "Player's inventory", value = 1),
+    app_commands.Choice(name = "Player's clothes", value = 2),
+    app_commands.Choice(name = "Object", value = 3)
     ])
 @app_commands.describe(container_name = "The name of the container you wish to delete the item from.")
 @app_commands.describe(item_name = "The name of the item you wish to delete.")
@@ -2290,6 +2305,11 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
         containerVar = get_player_from_name(container_name)
 
     elif container.value == 2:
+        ifNone = f"*Player **{container_name}** could not be found. Please use `/listplayers` to see all current players.*"
+        containerType = "clothes of"
+        containerVar = get_player_from_name(container_name)
+
+    elif container.value == 3:
 
         if object_room_name == '':
             await interaction.response.send_message(f"*To add an item to an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
@@ -2312,8 +2332,11 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
     if containerVar is None:
         await interaction.response.send_message(ifNone)
         return
-    
-    itemList = containerVar.get_items()
+
+    if container.value == 2:
+        itemList = containerVar.get_clothes()    
+    else:
+        itemList = containerVar.get_items()
 
     if len(itemList) == 0:
         await interaction.response.send_message("*No items could be found in that container.*")
@@ -2328,7 +2351,10 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
         await interaction.response.send_message(f"*Could not find the item **{item_name}**.*")
         return
 
-    containerVar.del_item(searchedItem)
+    if container.value == 2:
+        containerVar.del_clothes(searchedItem)
+    else:
+        containerVar.del_item(searchedItem)
 
     save()
     await interaction.response.send_message(f"*Deleted the item **{searchedItem.get_name()}** from the {containerType} **{containerVar.get_name()}**.*")
@@ -2683,8 +2709,9 @@ async def forceundress(interaction: discord.Interaction, player_name: str, conta
 @client.tree.command(name = "listitems", description = "List the items in a container.")
 @app_commands.choices(container = [
     app_commands.Choice(name = "Room", value = 0),
-    app_commands.Choice(name = "Player", value = 1),
-    app_commands.Choice(name = "Object", value = 2)
+    app_commands.Choice(name = "Player's inventory", value = 1),
+    app_commands.Choice(name = "Player's clothes", value = 2),
+    app_commands.Choice(name = "Object", value = 3)
     ])
 @app_commands.describe(container_name = "The name of the container you wish to add the item to.")
 @app_commands.describe(object_room_name = "Optional; if the container is an object, specify the room name.")
@@ -2711,7 +2738,18 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
 
         endMsg = f"**{containerVar.get_name()}**'s inventory"
 
+    
     elif container.value == 2:
+        containerVar = get_player_from_name(container_name)
+
+        if containerVar is None:
+            await interaction.response.send_message(f"*Player **{container_name}** could not be found. Please use `/listplayers` to see a list of all current players.*")
+            return
+
+        endMsg = f"**{containerVar.get_name()}**'s clothes"        
+
+
+    elif container.value == 3:
 
         if object_room_name == '':
             await interaction.response.send_message(f"*To look inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
@@ -2733,7 +2771,10 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
         
         endMsg = f"the object **{containerVar.get_name()}** in the room **{room.get_name()}**"
 
-    itemList = containerVar.get_items()
+    if container.value == 2:
+        itemList = containerVar.get_clothes()
+    else:
+        itemList = containerVar.get_items()
     
     if len(itemList) == 0:
         await interaction.response.send_message(f"*Looked inside of {endMsg}:*\n\n`No items found.`")
