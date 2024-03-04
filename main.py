@@ -2020,7 +2020,7 @@ async def listrooms(interaction: discord.Interaction):
     
     await interaction.response.send_message(roomList)
 #endregion
-#region /addexit FORMATTED
+#region /addexit might want to use this "find exits" code for others?
 @client.tree.command(name = "addexit", description = "Add a connection between two rooms.")
 @app_commands.describe(first_room_name = "The first of the two rooms you wish to add a connection between.")
 @app_commands.describe(second_room_name = "The second of the two rooms you wish to add a connection between.")
@@ -2044,6 +2044,16 @@ async def addexit(interaction: discord.Interaction, first_room_name: str, second
     room_two = get_room_from_name(simplified_room_two)
     original_room_one = simplified_keys[simplified_room_one]
     original_room_two = simplified_keys[simplified_room_two]
+
+    for exit in room_one.get_exits():
+        if simplify_string(exit.get_room1()) == simplify_string(room_one.get_name()):
+            if simplify_string(exit.get_room2()) == simplify_string(room_two.get_name()):
+                await interaction.response.send_message(f"*Connection from **{room_one.get_name()}** to **{room_two.get_name()}** already exists. Please use `/editexit` if you would like to change it.*")
+                return
+        elif simplify_string(exit.get_room1()) == simplify_string(room_two.get_name()):
+            if simplify_string(exit.get_room2()) == simplify_string(room_one.get_name()):
+                await interaction.response.send_message(f"*Connection from **{room_one.get_name()}** to **{room_two.get_name()}** already exists. Please use `/editexit` if you would like to change it.*")
+                return
 
     exit: Exit = Exit(original_room_one, original_room_two, is_locked, key_name)
 
@@ -2642,7 +2652,7 @@ async def forcewear(interaction: discord.Interaction, player_name: str, containe
                 await interaction.response.send_message(f"***{player.get_name()}** tried to {midStr} the item **{item.get_name()}**, but it was not a piece of clothing.*")
                 return
 
-    await interaction.response.send_message(f"Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
+    await interaction.response.send_message(f"Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a container.*")
 #endregion
 #region /forceundress
 @client.tree.command(name = "forceundress", description = "Make a player take off a clothing item they are currently wearing.", guild=GUILD)
@@ -2787,6 +2797,58 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
     allItems = ', '.join(itemNames)
 
     await interaction.response.send_message(f"*Looked inside of {endMsg}:*\n\n{allItems}")
+#endregion
+#region /listexists
+@client.tree.command(name = "listexits", description = "List all locations that are connected to a room.")
+@app_commands.describe(room_name = "The name of the room you wish to see the exits of.")
+async def exits(interaction: discord.Interaction, room_name: str):
+    currRoom = get_room_from_name(room_name)
+
+    if currRoom is None:
+        await interaction.response.send_message(f"*Could not find the room **{room_name}**. Please use `/listrooms` to see a list of all current rooms.*")
+        return
+    
+    exits = currRoom.get_exits()
+
+    if len(exits) == 0:
+        await interaction.response.send_message(f"*Looked at the exits in the room **{currRoom.get_name()}**:*\n\n`No exits found.`")
+        return
+    
+    exitNames = []
+    for exit in exits:
+        currExit = ''
+        if exit.get_room1() == currRoom.get_name():
+            currExit = exit.get_room2()
+        else:
+            currExit = exit.get_room1()
+        exitNames.append("`" + currExit + "`")
+    
+    allExits = ', '.join(exitNames)
+    await interaction.response.send_message(f"*Looked at the exits in the room **{currRoom.get_name()}**:*\n\n{allExits}")
+
+#endregion
+#region /listobjects
+@client.tree.command(name = "listobjects", description = "List all of the objects in a room.", guild=GUILD)
+@app_commands.describe(room_name = "The room that you wish to see the objects of.")
+async def listobjects(interaction: discord.Interaction, room_name: str):
+    currRoom = get_room_from_name(room_name)
+
+    if currRoom is None:
+        await interaction.response.send_message(f"*Could not find the room **{room_name}**. Please use `/listrooms` to see a list of all current rooms.*")
+        return
+
+    objList = currRoom.get_objects()
+    
+    objNames = []
+    for obj in objList:
+        objNames.append("`" + obj.get_name() + "`")
+
+    allObjs = ', '.join(objNames)
+
+    if len(objList) == 0:
+            await interaction.response.send_message(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n`No objects found.`")
+            return
+    await interaction.response.send_message(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n{allObjs}")
 #endregion
 #endregion
 
