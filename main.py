@@ -626,6 +626,33 @@ async def room_items_autocomplete(interaction: discord.Interaction, item_name: s
     return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
 #endregion
 
+#region players autocomplete
+async def players_autocomplete(interaction: discord.Integration, player_name: str) -> typing.List[app_commands.Choice[str]]:
+    channel_id = interaction.channel_id
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    currRoom = get_room_from_id(channel_id)
+
+    if await check_paused(player, interaction):
+        return []
+    
+    playerList = []
+    for thisPlayer in playerdata.values():
+        currPlayer = ''
+        if thisPlayer.get_room() is not None:
+            if thisPlayer.get_room().get_name() == currRoom.get_name():
+                playerList.append(thisPlayer)
+    
+    choices: typing.List[app_commands.Choice[str]] = [
+        app_commands.Choice(name=thisPlayer.get_name(), value=thisPlayer.get_name())
+        for thisPlayer in playerList
+    ]
+    if not player_name:
+        return choices
+    
+    return[choice for choice in choices if player_name.lower() in choice.name.lower()][:25]
+#endregion
+
 #region user items autocomplete
 async def user_items_autocomplete(interaction: discord.Interaction, item_name: str) -> typing.List[app_commands.Choice[str]]:
     id = interaction.user.id
@@ -2132,6 +2159,7 @@ async def unlockexit(interaction: discord.Interaction, exit_name: str, key_name:
 #region /lookplayer
 @client.tree.command(name = "lookplayer", description = "Get the description of a specific player in the current room.")
 @app_commands.describe(player_name = "The list of players in the current room.")
+@app_commands.autocomplete(player_name=players_autocomplete)
 async def lookplayer(interaction: discord.Interaction, player_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
