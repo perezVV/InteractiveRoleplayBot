@@ -1,3 +1,4 @@
+import typing
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
@@ -562,6 +563,180 @@ def set_max_wear_weight(new_max: int):
     return
 #endregion
 
+#region exit name autocomplete
+async def exit_name_autocomplete(interaction: discord.Interaction, room_name: str) -> typing.List[app_commands.Choice[str]]:
+    id = interaction.user.id
+    channel_id = interaction.channel_id
+    player = get_player_from_id(id)
+    currRoom = get_room_from_id(channel_id)
+
+    if await check_paused(player, interaction):
+        return []
+
+    if player is None or player.get_name() not in playerdata.keys():
+        return []
+
+    if currRoom is None:
+        return []
+
+    exits = currRoom.get_exits()
+
+    if len(exits) == 0:
+        return []
+
+    choices: typing.List[app_commands.Choice[str]] = []
+
+    for exit in exits:
+        currExit = ''
+        if exit.get_room1() == currRoom.get_name():
+            currExit = exit.get_room2()
+        else:
+            currExit = exit.get_room1()
+
+        choices.append(app_commands.Choice(name = currExit, value = currExit))
+
+    if not room_name:
+        return choices
+
+    return [choice for choice in choices if room_name.lower() in choice.name.lower()][:25]
+#endregion
+
+#region room items autocomplete
+async def room_items_autocomplete(interaction: discord.Interaction, item_name: str) -> typing.List[app_commands.Choice[str]]:
+    channel_id = interaction.channel_id
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    currRoom = get_room_from_id(channel_id)
+
+    if await check_paused(player, interaction):
+        return []
+
+    if currRoom is None:
+        return []
+
+    itemList = currRoom.get_items()
+
+    choices: typing.List[app_commands.Choice[str]] = [
+        app_commands.Choice(name=item.get_name(), value=item.get_name())
+        for item in itemList
+    ]
+    if not item_name:
+        return choices
+
+    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+#endregion
+
+#region user items autocomplete
+async def user_items_autocomplete(interaction: discord.Interaction, item_name: str) -> typing.List[app_commands.Choice[str]]:
+    id = interaction.user.id
+    player = get_player_from_id(id)
+
+    if await check_paused(player, interaction):
+        return []
+
+    if player is None or player.get_name() not in playerdata.keys():
+        return []
+
+    playerItems = player.get_items()
+
+    if len(playerItems) == 0:
+        return []
+
+    choices: typing.List[app_commands.Choice[str]] = [
+        app_commands.Choice(name=item.get_name(), value=item.get_name())
+        for item in playerItems
+    ]
+    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+#endregion
+
+#region clothing autocomplete
+async def clothing_autocomplete(interaction: discord.Interaction, item_name: str) -> typing.List[app_commands.Choice[str]]:
+    id = interaction.user.id
+    player = get_player_from_id(id)
+
+    if await check_paused(player, interaction):
+        return []
+
+    if player == None or not player.get_name() in playerdata.keys():
+        return []
+    
+    playerClothes = player.get_clothes()
+
+    if len(playerClothes) == 0:
+        return []
+
+    choices: typing.List[app_commands.Choice[str]] = [
+        app_commands.Choice(name=clothes.get_name(), value=clothes.get_name())
+        for clothes in playerClothes
+    ]
+    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+#endregion
+
+#region object autocomplete
+async def object_autocomplete(interaction: discord.Interaction, object_name: str) -> typing.List[app_commands.Choice[str]]:
+    channel_id = interaction.channel_id
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    currRoom = get_room_from_id(channel_id)
+
+    if await check_paused(player, interaction):
+        return []
+
+    if currRoom is None:
+        return []
+
+    objList = currRoom.get_objects()
+
+    choices: typing.List[app_commands.Choice[str]] = [
+        app_commands.Choice(name=obj.get_name(), value=obj.get_name())
+        for obj in objList
+    ]
+    return [choice for choice in choices if object_name.lower() in choice.name.lower()][:25]
+#endregion
+
+#region object contents autocomplete
+async def object_contents_autocomplete(interaction: discord.Interaction, item_name: str) -> typing.List[app_commands.Choice[str]]:
+    if not "object_name" in interaction.namespace:
+        return []
+    object_name: str = interaction.namespace["object_name"]
+
+    channel_id = interaction.channel_id
+    player_id = interaction.user.id
+    player = get_player_from_id(player_id)
+    currRoom = get_room_from_id(channel_id)
+
+    if await check_paused(player, interaction):
+        return []
+
+    if currRoom is None:
+        return []
+    
+    searchedObj = None
+    for object in currRoom.get_objects():
+        if simplify_string(object.get_name()) == simplify_string(object_name):
+            searchedObj = object
+    
+    if searchedObj is None:
+        return []
+    
+    if not searchedObj.get_container_state():
+        return []
+    
+    if searchedObj.get_locked_state():
+        return []
+    
+    itemList = searchedObj.get_items()
+    if len(itemList) == 0:
+        return []
+
+    choices: typing.List[app_commands.Choice[str]] = [
+        app_commands.Choice(name=item.get_name(), value=item.get_name())
+        for item in itemList
+    ]
+    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+#endregion
+
+
 #region Start bot
 def configure():
     load_dotenv()
@@ -648,6 +823,7 @@ async def desc(interaction: discord.Interaction):
 @client.tree.command(name = "take", description = "Take an item from the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to take.")
 @app_commands.describe(amount = "The amount of that item you wish to take.")
+@app_commands.autocomplete(item_name=room_items_autocomplete)
 async def take(interaction: discord.Interaction, item_name: str, amount: int = 0):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -723,6 +899,7 @@ async def take(interaction: discord.Interaction, item_name: str, amount: int = 0
 @client.tree.command(name = "drop", description = "Drop an item from your inventory into the room.", guild=GUILD)
 @app_commands.describe(item_name = "The item you wish to drop.")
 @app_commands.describe(amount = "The amount of that item you wish to drop.")
+@app_commands.autocomplete(item_name=user_items_autocomplete)
 async def drop(interaction: discord.Interaction, item_name: str, amount: int = 0):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -787,6 +964,7 @@ async def drop(interaction: discord.Interaction, item_name: str, amount: int = 0
 #region /takewear
 @client.tree.command(name = "takewear", description = "Take a clothing item from the room and wear it.", guild=GUILD)
 @app_commands.describe(item_name = "The clothing item you wish to wear.")
+@app_commands.autocomplete(item_name=room_items_autocomplete)
 async def takewear(interaction: discord.Interaction, item_name: str):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -831,6 +1009,7 @@ async def takewear(interaction: discord.Interaction, item_name: str):
 #region /undressdrop
 @client.tree.command(name = "undressdrop", description = "Drop a clothing item that you are wearing into the room.", guild=GUILD)
 @app_commands.describe(item_name = "The clothing item you wish to drop.")
+@app_commands.autocomplete(item_name=clothing_autocomplete)
 async def undressdrop(interaction: discord.Interaction, item_name: str):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -869,6 +1048,7 @@ async def undressdrop(interaction: discord.Interaction, item_name: str):
 #region /wear
 @client.tree.command(name = "wear", description = "Wear a clothing item from your inventory.", guild=GUILD)
 @app_commands.describe(item_name = "The clothing item you wish to wear.")
+@app_commands.autocomplete(item_name=user_items_autocomplete)
 async def wear(interaction: discord.Interaction, item_name: str):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -907,6 +1087,7 @@ async def wear(interaction: discord.Interaction, item_name: str):
 #region /undress
 @client.tree.command(name = "undress", description = "Take off a clothing item and place it into your inventory.", guild=GUILD)
 @app_commands.describe(item_name = "The clothing item you wish to take off.")
+@app_commands.autocomplete(item_name=clothing_autocomplete)
 async def undress(interaction: discord.Interaction, item_name: str):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -977,6 +1158,7 @@ async def items(interaction: discord.Interaction):
 #region /lookitem
 @client.tree.command(name = "lookitem", description = "Get the description of a specific item in the current room.", guild=GUILD)
 @app_commands.describe(item_name = "The name of the item you wish to look at.")
+@app_commands.autocomplete(item_name=room_items_autocomplete)
 async def lookitem(interaction: discord.Interaction, item_name: str):
     await interaction.response.defer(thinking=True)
     channel_id = interaction.channel_id
@@ -1059,7 +1241,8 @@ async def objects(interaction: discord.Interaction):
 #region /lockobject
 @client.tree.command(name = "lockobject", description = "Lock an object in the current room using a key from your inventory.")
 @app_commands.describe(object_name = "The name of the object you wish to lock.")
-@app_commands.describe(key_name = "The name of the item in your inventory that can lock the object.")    
+@app_commands.describe(key_name = "The name of the item in your inventory that can lock the object.")
+@app_commands.autocomplete(object_name=object_autocomplete, key_name=user_items_autocomplete)
 async def lockobject(interaction: discord.Interaction, object_name: str, key_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
@@ -1118,7 +1301,8 @@ async def lockobject(interaction: discord.Interaction, object_name: str, key_nam
 #region /unlockobject
 @client.tree.command(name = "unlockobject", description = "Unlock an object in the current room using a key from your inventory.")
 @app_commands.describe(object_name = "The name of the object you wish to unlock.")
-@app_commands.describe(key_name = "The name of the item in your inventory that can unlock the object.")    
+@app_commands.describe(key_name = "The name of the item in your inventory that can unlock the object.")
+@app_commands.autocomplete(object_name=object_autocomplete, key_name=user_items_autocomplete)   
 async def unlockobject(interaction: discord.Interaction, object_name: str, key_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
@@ -1177,6 +1361,7 @@ async def unlockobject(interaction: discord.Interaction, object_name: str, key_n
 #region /lookobject
 @client.tree.command(name = "lookobject", description = "Get the description of a specific object in the current room.", guild=GUILD)
 @app_commands.describe(object_name = "The name of the object you wish to look at.")
+@app_commands.autocomplete(object_name=object_autocomplete)
 async def lookitem(interaction: discord.Interaction, object_name: str):
     await interaction.response.defer(thinking=True)
     channel_id = interaction.channel_id
@@ -1247,6 +1432,7 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
 #region /contents
 @client.tree.command(name = "contents", description = "List all of the items inside of an object.")
 @app_commands.describe(object_name = "The name of the object you wish to look inside of.")
+@app_commands.autocomplete(object_name=object_autocomplete)
 async def contents(interaction: discord.Interaction, object_name: str):
     await interaction.response.defer(thinking=True)
     channel_id = interaction.channel_id
@@ -1306,6 +1492,7 @@ async def contents(interaction: discord.Interaction, object_name: str):
 @client.tree.command(name = "lookinside", description = "Get the description of a specific item in an object.", guild=GUILD)
 @app_commands.describe(object_name = "The name of the object you wish to look inside of.")
 @app_commands.describe(item_name = "The name of the item you wish to look at.")
+@app_commands.autocomplete(object_name=object_autocomplete, item_name=object_contents_autocomplete)
 async def lookinside(interaction: discord.Interaction, object_name: str, item_name: str):
     await interaction.response.defer(thinking=True)
     channel_id = interaction.channel_id
@@ -1377,6 +1564,7 @@ async def lookinside(interaction: discord.Interaction, object_name: str, item_na
 @app_commands.describe(object_name = "The object you wish to take an item from.")
 @app_commands.describe(item_name = "The item you wish to take.")
 @app_commands.describe(amount = "The amount of that item you wish to take.")
+@app_commands.autocomplete(object_name=object_autocomplete, item_name=object_contents_autocomplete)
 async def take(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -1470,6 +1658,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
 @app_commands.describe(object_name = "The object you wish to drop the item into.")
 @app_commands.describe(item_name = "The item you wish to drop.")
 @app_commands.describe(amount = "The amount of that item you wish to drop.")
+@app_commands.autocomplete(object_name=object_autocomplete, item_name=user_items_autocomplete)
 async def drop(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -1589,6 +1778,7 @@ async def inv(interaction: discord.Interaction):
 #region /lookinv
 @client.tree.command(name = "lookinv", description = "Get the description of a specific item in your inventory.", guild=GUILD)
 @app_commands.describe(item_name = "The name of the item you wish to look at.")
+@app_commands.autocomplete(item_name=user_items_autocomplete)
 async def lookinv(interaction: discord.Interaction, item_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
@@ -1652,6 +1842,7 @@ async def clothes(interaction: discord.Interaction):
 #region /lookclothes
 @client.tree.command(name = "lookclothes", description = "Get the description of a specific clothing item you are currently wearing.", guild=GUILD)
 @app_commands.describe(clothes_name = "The name of the clothing item you wish to look at.")
+@app_commands.autocomplete(clothes_name=clothing_autocomplete)
 async def lookclothes(interaction: discord.Interaction, clothes_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
@@ -1688,6 +1879,7 @@ async def lookclothes(interaction: discord.Interaction, clothes_name: str):
 #region /goto
 @client.tree.command(name = "goto", description = "Move to the room that you specify.")
 @app_commands.describe(room_name = "The name of the room you wish the move to.")
+@app_commands.autocomplete(room_name=exit_name_autocomplete)
 async def goto(interaction: discord.Interaction, room_name: str):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
@@ -1809,6 +2001,7 @@ async def exits(interaction: discord.Interaction):
 @client.tree.command(name = "lockexit", description = "Locks an exit that is connected to the current room using a key.")
 @app_commands.describe(exit_name = "The name of the exit you wish to lock.")
 @app_commands.describe(key_name = "The name of the item in your inventory that can lock the exit.")
+@app_commands.autocomplete(exit_name=exit_name_autocomplete, key_name=user_items_autocomplete)
 async def lockexit(interaction: discord.Interaction, exit_name: str, key_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
@@ -1874,6 +2067,7 @@ async def lockexit(interaction: discord.Interaction, exit_name: str, key_name: s
 @client.tree.command(name = "unlockexit", description = "Unlocks an exit that is connected to the current room using a key.")
 @app_commands.describe(exit_name = "The name of the exit you wish to unlock.")
 @app_commands.describe(key_name = "The name of the item in your inventory that can unlock the exit.")
+@app_commands.autocomplete(exit_name=exit_name_autocomplete, key_name=user_items_autocomplete)
 async def unlockexit(interaction: discord.Interaction, exit_name: str, key_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
