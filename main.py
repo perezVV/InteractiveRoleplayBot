@@ -3850,12 +3850,14 @@ async def editexit(interaction: discord.Interaction, room_one_name: str, room_tw
 
     exit = None
     for exit in exitsOne:
-        if exit.get_room1() == room_one.get_name():
+        if exit.get_room1() == room_two.get_name():
             if simplify_string(exit.get_room2()) == simplify_string(room_one_name):
                 exit = exit
-        else:
-            if simplify_string(exit.get_room1()) == simplify_string(room_one_name):
+                break
+        elif exit.get_room1() == room_one.get_name():
+            if simplify_string(exit.get_room2()) == simplify_string(room_two_name):
                 exit = exit
+                break
 
     if new_locked_state == None and new_key == '':
         await interaction.followup.send(f"*Please select an option and enter a new value to edit an exit.*")
