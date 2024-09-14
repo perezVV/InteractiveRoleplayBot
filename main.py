@@ -588,12 +588,15 @@ async def exit_name_autocomplete(interaction: discord.Interaction, room_name: st
 
     for exit in exits:
         currExit = ''
+        locked_state = ''
         if exit.get_room1() == currRoom.get_name():
             currExit = exit.get_room2()
         else:
             currExit = exit.get_room1()
+        if exit.get_locked_state():
+            locked_state = ' (Locked)'
 
-        choices.append(app_commands.Choice(name = currExit, value = currExit))
+        choices.append(app_commands.Choice(name = currExit + locked_state, value = currExit))
 
     if not room_name:
         return choices
@@ -2023,6 +2026,8 @@ async def exits(interaction: discord.Interaction):
             currExit = exit.get_room2()
         else:
             currExit = exit.get_room1()
+        if exit.get_locked_state():
+            currExit = currExit + ' (Locked)'
         exitNames.append("`" + currExit + "`")
     
     allExits = ', '.join(exitNames)
@@ -3380,6 +3385,8 @@ async def exits(interaction: discord.Interaction, room_name: str):
             currExit = exit.get_room2()
         else:
             currExit = exit.get_room1()
+        if exit.get_locked_state():
+            currExit = currExit + ' (Locked)'
         exitNames.append("`" + currExit + "`")
     
     allExits = ', '.join(exitNames)
