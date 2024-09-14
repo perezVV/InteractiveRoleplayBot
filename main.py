@@ -1903,7 +1903,7 @@ async def lookclothes(interaction: discord.Interaction, clothes_name: str):
 
     await interaction.followup.send(f"***{player.get_name()}** looked at their clothing item **{searchedClothes.get_name()}**:*\n\n__`{searchedClothes.get_name()}`__\n\n__`Weight`__: `{searchedClothes.get_weight()}`\n\n{searchedClothes.get_desc()}")
 #endregion
-#region /goto
+#region /goto TODO: post-AA, set previous read room perms to be neutral rather than false
 @client.tree.command(name = "goto", description = "Move to the room that you specify.")
 @app_commands.describe(room_name = "The name of the room you wish the move to.")
 @app_commands.autocomplete(room_name=exit_name_autocomplete)
@@ -3947,6 +3947,56 @@ async def editobject(interaction: discord.Interaction, room_name: str, object_na
 async def help(interaction: discord.Interaction):
     emby = discord.Embed(description=adminhelp1)
     await interaction.response.send_message(embed=emby, view = AdminHelp(), ephemeral=True)
+#endregion
+#region /killplayer TODO: remove once /goto is fixed post-AA. currently a workaround
+@client.tree.command(name = "killplayer", description = "Gives a player the ability to see every room. Usually used when swapping from player to spectator.")
+@app_commands.describe(player_name = "The player you wish to add as a spectator.")
+@app_commands.default_permissions()
+async def killplayer(interaction: discord.Interaction, player_name: str):
+    await interaction.response.defer(thinking=True)
+    if len(roomdata) == 0:
+        await interaction.followup.send("There are currently no rooms.")
+        return
+    
+    player = get_player_from_name(player_name)
+
+    if player is None:
+        await interaction.followup.send(f"*Could not find the player **{player_name}**. Please use `/listplayers` to get a list of all current players.*")
+    
+    user = client.get_user(int(player.get_id()))
+
+    for key in roomdata:
+        currRoom = roomdata[key]
+        channel = client.get_channel(int(currRoom.get_id()))
+        await channel.set_permissions(user, read_messages = True)
+    
+    await interaction.followup.send(f"*Killed player **{player_name}**.*")
+#endregion
+#region /reviveplayer TODO: remove once /goto is fixed post-AA. currently a workaround
+@client.tree.command(name = "reviveplayer", description = "Removes a player's ability to see every room. Usually used when swapping from spectator to player.")
+@app_commands.describe(player_name = "The player you wish to bring back to the experience.")
+@app_commands.default_permissions()
+async def reviveplayer(interaction: discord.Interaction, player_name: str):
+    await interaction.response.defer(thinking=True)
+    if len(roomdata) == 0:
+        await interaction.followup.send("There are currently no rooms.")
+        return
+    
+    player = get_player_from_name(player_name)
+
+    if player is None:
+        await interaction.followup.send(f"*Could not find the player **{player_name}**. Please use `/listplayers` to get a list of all current players.*")
+    
+    user = client.get_user(int(player.get_id()))
+
+    for key in roomdata:
+        currRoom = roomdata[key]
+        if currRoom.get_id() == player.get_room().get_id():
+            continue
+        channel = client.get_channel(int(currRoom.get_id()))
+        await channel.set_permissions(user, read_messages = False)
+    
+    await interaction.followup.send(f"*Revived player **{player_name}**.*")
 #endregion
 #endregion
 
