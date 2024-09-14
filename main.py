@@ -1425,16 +1425,20 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
         is_locked = 'Opened'
 
     storage_amt = ''
+    used_storage = ''
     if searchedObj.get_storage() == -1:
-        storage_amt = 'Infinite'
+        storage_amt = '∞'
     else:
         storage_amt = str(searchedObj.get_storage())
+    
+    used_storage = str(len(searchedObj.get_items())) + '/'
+    
     if player is not None:
         if searchedObj.get_container_state():
             if searchedObj.get_desc() == '':
-                await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`")
+                await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`")
                 return
-            await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}")
+            await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}")
             return
         if searchedObj.get_desc() == '':
             await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n`Object has no description.`")
@@ -3530,19 +3534,22 @@ async def seeobject(interaction: discord.Interaction, room_name: str, object_nam
         is_locked = 'Opened'
 
     storage_amt = ''
+    used_storage = ''
     if searchedObj.get_storage() == -1:
-        storage_amt = 'Infinite'
+        storage_amt = '∞'
     else:
         storage_amt = str(searchedObj.get_storage())
+    
+    used_storage = str(len(searchedObj.get_items())) + '/'
 
     keyName = str(searchedObj.get_key_name())
     if keyName == '':
         keyName = "None"
 
     if searchedObj.get_desc() == '':
-        await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{str(storage_amt)}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n`Object has no description.`")
+        await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n`Object has no description.`")
         return
-    await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{str(storage_amt)}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n{searchedObj.get_desc()}")
+    await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n{searchedObj.get_desc()}")
     return
 #endregion
 #region /seeexit
