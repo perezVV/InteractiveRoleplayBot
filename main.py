@@ -28,6 +28,7 @@ def get_all_extensions(str_path: str, folder: str = "cogs") -> list[str]:
     for path in pathlist:
         str_path = str(path.as_posix())
         str_path = file_to_ext(str_path, base_path)
+        ext_files.append(str_path)
 
     return ext_files
 
