@@ -29,9 +29,6 @@ def get_all_extensions(str_path: str, folder: str = "cogs") -> list[str]:
         str_path = str(path.as_posix())
         str_path = file_to_ext(str_path, base_path)
 
-        if str_path != "exts.db_handler":
-            ext_files.append(str_path)
-
     return ext_files
 
 load_dotenv()
