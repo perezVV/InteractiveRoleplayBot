@@ -61,7 +61,7 @@ class Object:
         self.isLocked = isLocked
         self.keyName = keyName
         self.storage = storage
-        self.objItems = []
+        self.objItems: typing.List[Item] = []
 
     def get_name(self):
         return self.name
@@ -101,7 +101,7 @@ class Object:
         return
 
     def edit_item(self, origItem: Item, item: Item):
-        self.objItems[origItem] = item
+        self.objItems[self.objItems.index(origItem)] = item
         return
 
     def edit_key_name(self, keyName: str):
@@ -161,9 +161,9 @@ class Room:
     def __init__(self, name: str, id: int, desc: str = ''):
         self.name = name
         self.id = id
-        self.roomItems = []
-        self.roomObjects = []
-        self.roomExits = []
+        self.roomItems: typing.List[Item] = []
+        self.roomObjects: typing.List[Object] = []
+        self.roomExits: typing.List[Exit] = []
         self.desc = desc
 
     def get_name(self):
@@ -197,7 +197,7 @@ class Room:
         return
     
     def edit_item(self, origItem: Item, item: Item):
-        self.roomItems[origItem] = item
+        self.roomItems[self.roomItems.index(origItem)] = item
         return
 
     def edit_name(self, name: str):
@@ -225,8 +225,8 @@ class Player:
     def __init__(self, name: str, id: int, desc: str = ''):
         self.name = name
         self.id = id
-        self.playerItems = []
-        self.playerClothes = []
+        self.playerItems: typing.List[Item] = []
+        self.playerClothes: typing.List[Item] = []
         self.room = None
         self.paused = None
         self.desc = desc
@@ -250,16 +250,10 @@ class Player:
         return self.playerClothes
 
     def get_weight(self):
-        invWeight = 0
-        for item in self.playerItems:
-            invWeight += item.get_weight()
-        return invWeight
+        return sum(item.get_weight() for item in self.playerItems)
 
     def get_clothes_weight(self):
-        clothesWeight = 0
-        for clothes in self.playerClothes:
-            clothesWeight += clothes.get_weight()
-        return clothesWeight
+        return sum(clothes.get_weight() for clothes in self.playerClothes)
     
     def is_paused(self):
         return self.paused
@@ -284,7 +278,7 @@ class Player:
         return
     
     def edit_item(self, origItem: Item, item: Item):
-        self.playerItems[origItem] = item
+        self.playerItems[self.playerClothes.index(origItem)] = item
         return
 
     def edit_name(self, name: str):
@@ -484,40 +478,28 @@ class AdminHelp(discord.ui.View):
 
 #region Save
 def save():
-    playerdata_out = open('playerdata.pickle', 'wb')
-    pickle.dump(playerdata, playerdata_out)
-    playerdata_out.close()
+    with open('playerdata.pickle', 'wb') as playerdata_out:
+        pickle.dump(playerdata, playerdata_out)
 
-    roomdata_out = open('roomdata.pickle', 'wb')
-    pickle.dump(roomdata, roomdata_out)
-    roomdata_out.close()
+    with open('roomdata.pickle', 'wb') as roomdata_out:
+        pickle.dump(roomdata, roomdata_out)
 #endregion
 
 #region Simplify string
-def simplify_string(str):
-    str = str.replace(' ', '')
-    str = str.lower()
-    return str
+def simplify_string(string: str) -> str:
+    return string.replace(' ', '').lower()
 #endregion
 
 #region Get Player methods
 
-#region Get player name from ID
-def get_player_name(id):
-    name = ''
-    for player in playerdata.values():
-        if player.get_id() == id:
-            name = player.name
-    return name
-#endregion
 #region Get player from ID
-def get_player_from_id(id):
+def get_player_from_id(player_id: typing.Union[str, int, None]) -> typing.Optional[Player]:
     for player in playerdata.values():
-        if player.get_id() == id:
+        if player.get_id() == player_id:
             return player
 #endregion
 #region Get player from name
-def get_player_from_name(name):
+def get_player_from_name(name: str) -> typing.Optional[Player]:
     for player in playerdata.values():
         if simplify_string(player.get_name()) == simplify_string(name):
             return player
@@ -528,13 +510,13 @@ def get_player_from_name(name):
 #region Get Room methods
 
 #region Get room from ID
-def get_room_from_id(id):
+def get_room_from_id(room_id: typing.Union[str, int, None]) -> typing.Optional[Room]:
     for room in roomdata.values():
-        if room.get_id() == id:
+        if room.get_id() == room_id:
             return room
 #endregion
 #region Get room from name
-def get_room_from_name(name):
+def get_room_from_name(name: str) -> typing.Optional[Room]:
     for room in roomdata.values():
         if simplify_string(room.get_name()) == simplify_string(name):
             return room
@@ -630,7 +612,7 @@ async def room_items_autocomplete(interaction: discord.Interaction, item_name: s
 #endregion
 
 #region players autocomplete
-async def players_autocomplete(interaction: discord.Integration, player_name: str) -> typing.List[app_commands.Choice[str]]:
+async def players_autocomplete(interaction: discord.Interaction, player_name: str) -> typing.List[app_commands.Choice[str]]:
     channel_id = interaction.channel_id
     player_id = interaction.user.id
     player = get_player_from_id(player_id)
@@ -639,11 +621,10 @@ async def players_autocomplete(interaction: discord.Integration, player_name: st
     if await check_paused(player, interaction):
         return []
     
-    playerList = []
+    playerList: typing.List[Player] = []
     for thisPlayer in playerdata.values():
-        currPlayer = ''
-        if thisPlayer.get_room() is not None:
-            if thisPlayer.get_room().get_name() == currRoom.get_name():
+        if room := thisPlayer.get_room():
+            if room.get_name() == currRoom.get_name():
                 playerList.append(thisPlayer)
     
     choices: typing.List[app_commands.Choice[str]] = [
@@ -687,9 +668,9 @@ async def clothing_autocomplete(interaction: discord.Interaction, item_name: str
     if await check_paused(player, interaction):
         return []
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         return []
-    
+
     playerClothes = player.get_clothes()
 
     if len(playerClothes) == 0:
@@ -783,7 +764,7 @@ def data(file):
     return datafile
 
 configure()
-GUILD = discord.Object(id=int(os.getenv('guild_id')))
+GUILD = discord.Object(id=int(os.environ['guild_id']))
 
 class Client(discord.Client):
     def __init__(self, *, intents:discord.Intents):
@@ -797,8 +778,8 @@ class Client(discord.Client):
 
 intents = discord.Intents.all()
 client = Client(intents=intents)
-playerdata = data('playerdata.pickle')
-roomdata = data('roomdata.pickle')
+playerdata: dict[str, Player] = data('playerdata.pickle')
+roomdata: dict[str, Room] = data('roomdata.pickle')
 
 @client.event
 async def on_ready():
@@ -816,7 +797,7 @@ async def on_ready():
 #####################################################
 
 #region Pause method
-async def check_paused(player, interaction):
+async def check_paused(player: typing.Optional[Player], interaction: discord.Interaction) -> bool:
     if player is not None and player.is_paused():
         await interaction.followup.send(content="*Player commands are currently paused. Please wait until the admin unpauses your ability to use player commands.*", ephemeral=True)
         return True
@@ -865,7 +846,7 @@ async def take(interaction: discord.Interaction, item_name: str, amount: int = 0
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake*.")
         return
 
@@ -876,7 +857,7 @@ async def take(interaction: discord.Interaction, item_name: str, amount: int = 0
     invWeight = player.get_weight()
     itemList = currRoom.get_items()
 
-    if amount == 0 or amount == 1:
+    if amount in {0, 1}:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
                 if (invWeight + item.get_weight()) > max_carry_weight:
@@ -891,40 +872,48 @@ async def take(interaction: discord.Interaction, item_name: str, amount: int = 0
         return
 
     if amount < 0:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number.*"
+        )
         return
 
-    if amount != 0 or amount != 1:
-        itemsFound = []
-        searchedItem = None
-        for item in itemList:
-            if simplify_string(item_name) == simplify_string(item.get_name()):
-                searchedItem = item
-                itemsFound.append(item)
-        if len(itemsFound) == 0:
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
-            return
-        if len(itemsFound) < amount:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
-            return
-        try:
-            newCarryWeight = 0
-            for i in range(amount):
-                newCarryWeight += itemsFound[i].get_weight()
-            if (invWeight + newCarryWeight) > get_max_carry_weight():
-                await interaction.followup.send(f"***{player.get_name()}** tried to take **{str(amount)}** of the item **{searchedItem.get_name()}**, but they could not fit that much into their inventory.*")
-                return
-            for i in range(amount):
-                player.add_item(itemsFound[i])
-                currRoom.del_item(itemsFound[i])
-            save()
-            await interaction.followup.send(f"***{player.get_name()}** took **{str(amount)}** of the item **{searchedItem.get_name()}***.")
-            return
-        except:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
-            return
+    itemsFound: typing.List[Item] = []
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            searchedItem = item
+            itemsFound.append(searchedItem)
 
-    await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
+    if not itemsFound or not searchedItem:
+        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
+        return
+    
+    if len(itemsFound) < amount:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/items` to see a list of items in the current room.*"
+        )
+        return
+    
+    try:
+        newCarryWeight = sum(itemsFound[i].get_weight() for i in range(amount))
+        if (invWeight + newCarryWeight) > get_max_carry_weight():
+            await interaction.followup.send(
+                f"***{player.get_name()}** tried to take **{amount}** of the item **{searchedItem.get_name()}**, but they could not fit that much into their inventory.*"
+            )
+            return
+        for i in range(amount):
+            player.add_item(itemsFound[i])
+            currRoom.del_item(itemsFound[i])
+        save()
+        await interaction.followup.send(
+            f"***{player.get_name()}** took **{amount}** of the item **{searchedItem.get_name()}***."
+        )
+        return
+    except Exception:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/items` to see a list of items in the current room.*"
+        )
+        return
 #endregion
 #region /drop
 @client.tree.command(name = "drop", description = "Drop an item from your inventory into the room.", guild=GUILD)
@@ -941,7 +930,7 @@ async def drop(interaction: discord.Interaction, item_name: str, amount: int = 0
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
@@ -951,7 +940,7 @@ async def drop(interaction: discord.Interaction, item_name: str, amount: int = 0
 
     itemList = player.get_items()
 
-    if amount == 0 or amount == 1:
+    if amount in {0, 1}:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
                 player.del_item(item)
@@ -963,34 +952,42 @@ async def drop(interaction: discord.Interaction, item_name: str, amount: int = 0
         return
 
     if amount < 0:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number.*"
+        )
         return
 
-    if amount != 0 or amount != 1:
-        itemsFound = []
-        searchedItem = None
-        for item in itemList:
-            if simplify_string(item_name) == simplify_string(item.get_name()):
-                searchedItem = item
-                itemsFound.append(item)
-        if len(itemsFound) == 0:
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-        if len(itemsFound) < amount:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-        try:
-            for i in range(amount):
-                player.del_item(itemsFound[i])
-                currRoom.add_item(itemsFound[i])
-            save()
-            await interaction.followup.send(f"***{player.get_name()}** dropped **{str(amount)}** of the item **{searchedItem.get_name()}**.*")
-            return
-        except:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
+    itemsFound: typing.List[Item] = []
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            searchedItem = item
+            itemsFound.append(searchedItem)
 
-    await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
+    if not itemsFound or not searchedItem:
+        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
+        return
+
+    if len(itemsFound) < amount:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*"
+        )
+        return
+
+    try:
+        for i in range(amount):
+            player.del_item(itemsFound[i])
+            currRoom.add_item(itemsFound[i])
+        save()
+        await interaction.followup.send(
+            f"***{player.get_name()}** dropped **{amount}** of the item **{searchedItem.get_name()}**.*"
+        )
+        return
+    except Exception:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*"
+        )
+        return
 #endregion
 #region /takewear
 @client.tree.command(name = "takewear", description = "Take a clothing item from the room and wear it.", guild=GUILD)
@@ -1006,7 +1003,7 @@ async def takewear(interaction: discord.Interaction, item_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
@@ -1016,7 +1013,7 @@ async def takewear(interaction: discord.Interaction, item_name: str):
 
     clothesWeight = player.get_clothes_weight()
     itemList = currRoom.get_items()
-    
+
     for item in itemList:
         if simplify_string(item_name) == simplify_string(item.get_name()):
             if item.get_wearable_state():
@@ -1030,11 +1027,10 @@ async def takewear(interaction: discord.Interaction, item_name: str):
                 currRoom.del_item(item)
                 save()
                 await interaction.followup.send(f"***{player.get_name()}** took and wore the item **{item.get_name()}**.*")
-                return
             else:
                 await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but it was not a piece of clothing.*")
-                return
-
+            return
+        
     await interaction.followup.send(f"Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
 #endregion
 #region /undressdrop
@@ -1051,7 +1047,7 @@ async def undressdrop(interaction: discord.Interaction, item_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
@@ -1068,11 +1064,9 @@ async def undressdrop(interaction: discord.Interaction, item_name: str):
                 currRoom.add_item(item)
                 save()
                 await interaction.followup.send(f"***{player.get_name()}** took off and dropped the item **{item.get_name()}**.*")
-                return
             else:
                 await interaction.followup.send(f"***{player.get_name()}** tried to take off and drop **{item.get_name()}**, but it was not a piece of clothing... how are they wearing it?*")
-                return
-
+            return
 
     await interaction.followup.send(f"*Could not find **{item_name}**. Please use `/clothes` to see the clothes you are wearing.*")
 #endregion
@@ -1088,13 +1082,13 @@ async def wear(interaction: discord.Interaction, item_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.")
         return
 
     clothesWeight = player.get_clothes_weight()
     itemList = player.get_items()
-    
+
     for item in itemList:
         if simplify_string(item_name) == simplify_string(item.get_name()):
             if item.get_wearable_state():
@@ -1108,10 +1102,9 @@ async def wear(interaction: discord.Interaction, item_name: str):
                 player.del_item(item)
                 save()
                 await interaction.followup.send(f"***{player.get_name()}** wore the item **{item.get_name()}**.*")
-                return
             else:
                 await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but it was not a piece of clothing.*")
-                return
+            return
 
     await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
 #endregion
@@ -1127,7 +1120,7 @@ async def undress(interaction: discord.Interaction, item_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
@@ -1143,12 +1136,10 @@ async def undress(interaction: discord.Interaction, item_name: str):
                 player.add_item(item)
                 save()
                 await interaction.followup.send(f"***{player.get_name()}** took off the item **{item.get_name()}**.*")
-                return
             else:
                 await interaction.followup.send(f"***{player.get_name()}** tried to take off **{item.get_name()}**, but it was not a piece of clothing... how are they wearing it?*")
-                return
-
-
+            return
+        
     await interaction.followup.send(f"*Could not find **{item_name}**. Please use `/clothes` to see the clothes you are wearing.*")
 #endregion
 #region /items
@@ -1168,22 +1159,19 @@ async def items(interaction: discord.Interaction):
         return
 
     itemList = currRoom.get_items()
-    
-    itemNames = []
-    for item in itemList:
-        itemNames.append("`" + item.get_name() + "`")
-
+    itemNames = [f"`{item.get_name()}`" for item in itemList]
     allItems = ', '.join(itemNames)
+
     if player is None:
         if len(itemList) == 0:
             await interaction.followup.send(f"*Looked at the items in the room **{str(currRoom.get_name())}**:*\n\n`No items found.`")
             return
         await interaction.followup.send(f"*Looked at the items in the room **{str(currRoom.get_name())}**:*\n\n{allItems}")
         return
-    
+
     if len(itemList) == 0:
-            await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n`No items could be found in the room.`")
-            return
+        await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n`No items could be found in the room.`")
+        return
     await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n{allItems}")
 #endregion
 #region /lookitem
@@ -1250,11 +1238,7 @@ async def objects(interaction: discord.Interaction):
         return
 
     objList = currRoom.get_objects()
-    
-    objNames = []
-    for obj in objList:
-        objNames.append("`" + obj.get_name() + "`")
-
+    objNames = [f"`{obj.get_name()}`" for obj in objList]
     allObjs = ', '.join(objNames)
 
     if player is not None:
@@ -1265,8 +1249,8 @@ async def objects(interaction: discord.Interaction):
         return
 
     if len(objList) == 0:
-            await interaction.followup.send(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n`No objects found.`")
-            return
+        await interaction.followup.send(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n`No objects found.`")
+        return
     await interaction.followup.send(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n{allObjs}")
 #endregion
 #region /lockobject
@@ -1284,7 +1268,7 @@ async def lockobject(interaction: discord.Interaction, object_name: str, key_nam
     if await check_paused(player, interaction):
         return
 
-    if player is None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("You are not a valid player. Please contact an admin if you believe this is a mistake.")
         return
 
@@ -1296,21 +1280,21 @@ async def lockobject(interaction: discord.Interaction, object_name: str, key_nam
     for object in currRoom.get_objects():
         if simplify_string(object.get_name()) == simplify_string(object_name):
             searchedObj = object
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
+
     if not searchedObj.get_container_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to lock **{searchedObj.get_name()}**, but it had no lock.*")
         return
-    
+
     if searchedObj.get_locked_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to lock the object **{searchedObj.get_name()}**, but it was already locked.*")
         return
 
     searchedItem = None
-    
+
     itemList = player.get_items()
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(key_name):
@@ -1333,7 +1317,7 @@ async def lockobject(interaction: discord.Interaction, object_name: str, key_nam
 @client.tree.command(name = "unlockobject", description = "Unlock an object in the current room using a key from your inventory.")
 @app_commands.describe(object_name = "The name of the object you wish to unlock.")
 @app_commands.describe(key_name = "The name of the item in your inventory that can unlock the object.")
-@app_commands.autocomplete(object_name=object_autocomplete, key_name=user_items_autocomplete)   
+@app_commands.autocomplete(object_name=object_autocomplete, key_name=user_items_autocomplete)
 async def unlockobject(interaction: discord.Interaction, object_name: str, key_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
@@ -1344,7 +1328,7 @@ async def unlockobject(interaction: discord.Interaction, object_name: str, key_n
     if await check_paused(player, interaction):
         return
 
-    if player is None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact an admin if you believe this is a mistake.*")
         return
 
@@ -1356,21 +1340,21 @@ async def unlockobject(interaction: discord.Interaction, object_name: str, key_n
     for object in currRoom.get_objects():
         if simplify_string(object.get_name()) == simplify_string(object_name):
             searchedObj = object
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
+
     if not searchedObj.get_container_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to unlock **{searchedObj.get_name()}**, but it had no lock.*")
         return
-    
+
     if not searchedObj.get_locked_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to unlock the object **{searchedObj.get_name()}**, but it was already unlocked.*")
         return
 
     searchedItem = None
-    
+
     itemList = player.get_items()
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(key_name):
@@ -1393,7 +1377,7 @@ async def unlockobject(interaction: discord.Interaction, object_name: str, key_n
 @client.tree.command(name = "lookobject", description = "Get the description of a specific object in the current room.", guild=GUILD)
 @app_commands.describe(object_name = "The name of the object you wish to look at.")
 @app_commands.autocomplete(object_name=object_autocomplete)
-async def lookitem(interaction: discord.Interaction, object_name: str):
+async def lookobject(interaction: discord.Interaction, object_name: str):
     await interaction.response.defer(thinking=True)
     channel_id = interaction.channel_id
     player_id = interaction.user.id
@@ -1406,27 +1390,23 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     objList = currRoom.get_objects()
 
     if len(objList) == 0:
         await interaction.followup.send("*No objects could be found in the room.*")
         return
-    
+
     searchedObj = None
     for obj in objList:
         if simplify_string(obj.get_name()) == simplify_string(object_name):
             searchedObj = obj
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the item **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
-    is_locked = ''
-    if searchedObj.get_locked_state():
-        is_locked = 'Locked'
-    else:
-        is_locked = 'Opened'
+
+    is_locked = 'Locked' if searchedObj.get_locked_state() else 'Opened'
 
     storage_amt = ''
     used_storage = ''
@@ -1434,30 +1414,38 @@ async def lookitem(interaction: discord.Interaction, object_name: str):
         storage_amt = '∞'
     else:
         storage_amt = str(searchedObj.get_storage())
-    
-    used_storage = str(len(searchedObj.get_items())) + '/'
-    
+
+    used_storage = f'{len(searchedObj.get_items())}/'
+
     if player is not None:
         if searchedObj.get_container_state():
             if searchedObj.get_desc() == '':
-                await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`")
+                await interaction.followup.send(
+                    f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`"
+                )
                 return
-            await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}")
+            await interaction.followup.send(
+                f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}"
+            )
             return
         if searchedObj.get_desc() == '':
             await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n`Object has no description.`")
             return
         await interaction.followup.send(f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n{searchedObj.get_desc()}")
         return
-    
+
     containerState = searchedObj.get_container_state()
     if containerState == True:
         if searchedObj.get_desc() == '':
-            await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`")
+            await interaction.followup.send(
+                f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{storage_amt}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`"
+            )
             return
-        await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{str(storage_amt)}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}")
+        await interaction.followup.send(
+            f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{storage_amt}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}"
+        )
         return
-    
+
     if searchedObj.get_desc() == '':
         await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n`Object has no description.`")
         return
@@ -1481,30 +1469,30 @@ async def contents(interaction: discord.Interaction, object_name: str):
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     searchedObj = None
     for object in currRoom.get_objects():
         if simplify_string(object.get_name()) == simplify_string(object_name):
             searchedObj = object
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
+
     if not searchedObj.get_container_state():
         if player is not None:
             await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
             return
         await interaction.followup.send(f"*Tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
         return
-    
+
     if searchedObj.get_locked_state():
         if player is not None:
             await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was locked.*")
             return
         await interaction.followup.send(f"*Tried to look inside of the object **{searchedObj.get_name()}**, but it was locked.*")
         return
-    
+
     itemList = searchedObj.get_items()
     if len(itemList) == 0:
         if player is not None:
@@ -1512,11 +1500,8 @@ async def contents(interaction: discord.Interaction, object_name: str):
             return
         await interaction.followup.send(f"*Looked inside of the object **{searchedObj.get_name()}**:*\n\n`No items could be found`.")
         return
-    
-    itemNames = []
-    for item in itemList:
-        itemNames.append("`" + item.get_name() + "`")
-        
+
+    itemNames = [f"`{item.get_name()}`" for item in itemList]
     allItems = ', '.join(itemNames)
     if player is not None:
         await interaction.followup.send(f"***{player.get_name()}** looked inside of the object **{searchedObj.get_name()}**:*\n\n{allItems}")
@@ -1541,23 +1526,23 @@ async def lookinside(interaction: discord.Interaction, object_name: str, item_na
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     searchedObj = None
     for object in currRoom.get_objects():
         if simplify_string(object.get_name()) == simplify_string(object_name):
             searchedObj = object
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
+
     if not searchedObj.get_container_state():
         if player is not None:
             await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
             return
         await interaction.followup.send(f"*Tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
         return
-    
+
     if searchedObj.get_locked_state():
         if player is not None:
             await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was locked.*")
@@ -1570,28 +1555,30 @@ async def lookinside(interaction: discord.Interaction, object_name: str, item_na
     if len(itemList) == 0:
         await interaction.followup.send(f"*No items could be found in the object **{searchedObj.get_name()}**.*")
         return
-    
+
     searchedItem = None
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(item_name):
             searchedItem = item
-    
+
     if searchedItem is None:
         await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
         return
-    
+
     if player is not None:
         if searchedItem.get_desc() == '':
             await interaction.followup.send(f"***{player.get_name()}** looked inside of the object **{searchedObj.get_name()}** at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{searchedItem.get_weight()}`\n\n__`Wearable`__: `{searchedItem.get_wearable_state()}`\n\n`Item has no description.`")
-            return
         else:
             await interaction.followup.send(f"***{player.get_name()}** looked inside of the object **{searchedObj.get_name()}** at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{searchedItem.get_weight()}`\n\n__`Wearable`__: `{searchedItem.get_wearable_state()}`\n\n{searchedItem.get_desc()}")
             return
+            return
+    
+        return
     
     if searchedItem.get_desc() == '':
         await interaction.followup.send(f"*Looked inside of the object **{searchedObj.get_name()}** at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{searchedItem.get_weight()}`\n\n__`Wearable`__: `{searchedItem.get_wearable_state()}`\n\n`Item has no description.`")
         return
-    
+
     await interaction.followup.send(f"*Looked inside of the object **{searchedObj.get_name()}** at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{searchedItem.get_weight()}`\n\n__`Wearable`__: `{searchedItem.get_wearable_state()}`\n\n{searchedItem.get_desc()}")
 #endregion
 #region /takefrom
@@ -1600,7 +1587,7 @@ async def lookinside(interaction: discord.Interaction, object_name: str, item_na
 @app_commands.describe(item_name = "The item you wish to take.")
 @app_commands.describe(amount = "The amount of that item you wish to take.")
 @app_commands.autocomplete(object_name=object_autocomplete, item_name=object_contents_autocomplete)
-async def take(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
+async def takefrom(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
     channel_id = interaction.channel_id
@@ -1610,7 +1597,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
@@ -1622,15 +1609,15 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
     for object in currRoom.get_objects():
         if simplify_string(object.get_name()) == simplify_string(object_name):
             searchedObj = object
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
+
     if not searchedObj.get_container_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to take an item from the object **{searchedObj.get_name()}**, but it was not a container.*")
         return
-    
+
     if searchedObj.get_locked_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to take an item from the object **{searchedObj.get_name()}**, but it was locked.*")
         return
@@ -1638,7 +1625,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
     invWeight = player.get_weight()
     itemList = searchedObj.get_items()
 
-    if amount == 0 or amount == 1:
+    if amount in {0, 1}:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
                 if (invWeight + item.get_weight()) > max_carry_weight:
@@ -1653,40 +1640,47 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
         return
 
     if amount < 0:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number.*"
+        )
         return
 
-    if amount != 0 or amount != 1:
-        itemsFound = []
-        searchedItem = None
-        for item in itemList:
-            if simplify_string(item_name) == simplify_string(item.get_name()):
-                searchedItem = item
-                itemsFound.append(item)
-        if len(itemsFound) == 0:
-            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
-            return
-        if len(itemsFound) < amount:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
-            return
-        try:
-            newCarryWeight = 0
-            for i in range(amount):
-                newCarryWeight += itemsFound[i].get_weight()
-            if (invWeight + newCarryWeight) > get_max_carry_weight():
-                await interaction.followup.send(f"***{player.get_name()}** tried to take **{str(amount)}** of the item **{searchedItem.get_name()}** from the object **{searchedObj.get_name()}**, but they could not fit that much into their inventory.*")
-                return
-            for i in range(amount):
-                player.add_item(itemsFound[i])
-                searchedObj.del_item(itemsFound[i])
-            save()
-            await interaction.followup.send(f"***{player.get_name()}** took **{str(amount)}** of the item **{searchedItem.get_name()}** from **{searchedObj.get_name()}***.")
-            return
-        except:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
-            return
+    itemsFound: typing.List[Item] = []
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            searchedItem = item
+            itemsFound.append(searchedItem)
 
-    await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
+    if not itemsFound or not searchedItem:
+        await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
+        return
+
+    if len(itemsFound) < amount:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*"
+        )
+        return
+    try:
+        newCarryWeight = sum(itemsFound[i].get_weight() for i in range(amount))
+        if (invWeight + newCarryWeight) > get_max_carry_weight():
+            await interaction.followup.send(
+                f"***{player.get_name()}** tried to take **{amount}** of the item **{searchedItem.get_name()}** from the object **{searchedObj.get_name()}**, but they could not fit that much into their inventory.*"
+            )
+            return
+        for i in range(amount):
+            player.add_item(itemsFound[i])
+            searchedObj.del_item(itemsFound[i])
+        save()
+        await interaction.followup.send(
+            f"***{player.get_name()}** took **{amount}** of the item **{searchedItem.get_name()}** from **{searchedObj.get_name()}***."
+        )
+        return
+    except Exception:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*"
+        )
+        return
 #endregion
 #region /dropin
 @client.tree.command(name = "dropin", description = "Drop an item from your inventory into an object.", guild=GUILD)
@@ -1694,7 +1688,7 @@ async def take(interaction: discord.Interaction, object_name: str, item_name: st
 @app_commands.describe(item_name = "The item you wish to drop.")
 @app_commands.describe(amount = "The amount of that item you wish to drop.")
 @app_commands.autocomplete(object_name=object_autocomplete, item_name=user_items_autocomplete)
-async def drop(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
+async def dropin(interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
     await interaction.response.defer(thinking=True)
     id = interaction.user.id
     channel_id = interaction.channel_id
@@ -1704,7 +1698,7 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
@@ -1716,27 +1710,29 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
     for object in currRoom.get_objects():
         if simplify_string(object.get_name()) == simplify_string(object_name):
             searchedObj = object
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
+
     if not searchedObj.get_container_state():
         await interaction.followup.send(f"***{player.get_name()}** tried to drop an item from the object **{searchedObj.get_name()}**, but it was locked.*")
         return
-    
+
     if searchedObj.get_locked_state():
-        await interaction.followup.send("`" + player.get_name() + "` tried to drop an item inside of the object `" + searchedObj.get_name() + "`, but it was locked.")
+        await interaction.followup.send(
+            f"`{player.get_name()}` tried to drop an item inside of the object `{searchedObj.get_name()}`, but it was locked."
+        )
         return
 
     maxStorage = searchedObj.get_storage()
     contentsList = searchedObj.get_items()
     itemList = player.get_items()
 
-    if amount == 0 or amount == 1:
+    if amount in {0, 1}:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
-                if (len(contentsList) + 1) > maxStorage and not searchedObj.get_storage() == -1:
+                if (len(contentsList) + 1) > maxStorage and searchedObj.get_storage() != -1:
                     await interaction.followup.send(f"***{player.get_name()}** tried to drop the item **{item.get_name()}** into the object **{searchedObj.get_name()}**, but there wasn't enough space.*")
                     return
                 player.del_item(item)
@@ -1748,40 +1744,50 @@ async def drop(interaction: discord.Interaction, object_name: str, item_name: st
         return
 
     if amount < 0:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number.*"
+        )
         return
 
-    if amount != 0 or amount != 1:
-        itemsFound = []
-        searchedItem = None
-        for item in itemList:
-            if simplify_string(item_name) == simplify_string(item.get_name()):
-                searchedItem = item
-                itemsFound.append(item)
-        if len(itemsFound) == 0:
-            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-        if len(itemsFound) < amount:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-        try:
-            newStorageAmount = 0
-            for i in range(amount):
-                newStorageAmount += 1
-            if (len(contentsList) + newStorageAmount) > maxStorage and not searchedObj.get_storage() == -1:
-                await interaction.followup.send(f"***{player.get_name()}** tried to drop **{str(amount)}** of the item **{searchedItem.get_name()}** into the object **{searchedObj.get_name()}**, but there wasn't enough space.*")
-                return
-            for i in range(amount):
-                player.del_item(itemsFound[i])
-                searchedObj.add_item(itemsFound[i])
-            save()
-            await interaction.followup.send(f"***{player.get_name()}** dropped **{str(amount)}** of the item **{searchedItem.get_name()}** into **{searchedObj.get_name()}***.")
-            return
-        except:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
+    itemsFound: typing.List[Item] = []
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            searchedItem = item
+            itemsFound.append(searchedItem)
 
-    await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
+    if not itemsFound or not searchedItem:
+        await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
+        return
+
+    if len(itemsFound) < amount:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*"
+        )
+        return
+
+    try:
+        newStorageAmount = len(range(amount))
+        if (
+            len(contentsList) + newStorageAmount
+        ) > maxStorage and searchedObj.get_storage() != -1:
+            await interaction.followup.send(
+                f"***{player.get_name()}** tried to drop **{amount}** of the item **{searchedItem.get_name()}** into the object **{searchedObj.get_name()}**, but there wasn't enough space.*"
+            )
+            return
+        for i in range(amount):
+            player.del_item(itemsFound[i])
+            searchedObj.add_item(itemsFound[i])
+        save()
+        await interaction.followup.send(
+            f"***{player.get_name()}** dropped **{amount}** of the item **{searchedItem.get_name()}** into **{searchedObj.get_name()}***."
+        )
+        return
+    except Exception:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*"
+        )
+        return
 #endregion
 #region /inventory
 @client.tree.command(name = "inventory", description = "List all of the items in your inventory.")
@@ -1793,20 +1799,17 @@ async def inv(interaction: discord.Interaction):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
-    
+
     playerItems = player.get_items()
 
     if len(playerItems) == 0:
-            await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n`No items found.`")
-            return
+        await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n`No items found.`")
+        return
 
-    itemNames = []
-    for item in playerItems:
-        itemNames.append("`" + item.get_name() + "`")
-
+    itemNames = [f"`{item.get_name()}`" for item in playerItems]
     allItems = ', '.join(itemNames)
     await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n{allItems}")
 #endregion
@@ -1822,25 +1825,25 @@ async def lookinv(interaction: discord.Interaction, item_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
-    
+
     itemList = player.get_items()
 
     if len(itemList) == 0:
         await interaction.followup.send(f"*No items could be found in **{player.get_name()}'s** inventory.*")
         return
-    
+
     searchedItem = None
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(item_name):
             searchedItem = item
-    
+
     if searchedItem is None:
         await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
         return
-    
+
     if searchedItem.get_desc() == '':
         await interaction.followup.send(f"***{player.get_name()}** looked at the item **{searchedItem.get_name()}** in their inventory:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{searchedItem.get_weight()}`\n\n__`Wearable`__: `{searchedItem.get_wearable_state()}`\n\n`Item has no description.`")
         return
@@ -1867,7 +1870,7 @@ async def clothes(interaction: discord.Interaction):
             await interaction.followup.send(f"***{player.get_name()}** looked at their clothes:*\n\n`No clothes found.`")
             return
 
-    clothesNames = []
+    clothesNames: typing.List[str] = []
     for clothes in playerClothes:
         clothesNames.append("`" + clothes.get_name() + "`")
 
@@ -1886,25 +1889,25 @@ async def lookclothes(interaction: discord.Interaction, clothes_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
-    
+
     clothesList = player.get_clothes()
 
     if len(clothesList) == 0:
         await interaction.followup.send(f"*No clothes could be found on **{player.get_name()}**.*")
         return
-    
+
     searchedClothes = None
     for clothes in clothesList:
         if simplify_string(clothes.get_name()) == simplify_string(clothes_name):
             searchedClothes = clothes
-    
+
     if searchedClothes is None:
         await interaction.followup.send(f"*Could not find the clothing item **{clothes_name}**. Please use `/clothes` to see a list of clothes you are wearing.*")
         return
-    
+
     if searchedClothes.get_desc() == '':
         await interaction.followup.send(f"***{player.get_name()}** looked at their clothing item **{searchedClothes.get_name()}**:*\n\n__`{searchedClothes.get_name()}`__\n\n__`Weight`__: `{searchedClothes.get_weight()}`\n\n`Clothing item has no description.`")
         return
@@ -1925,10 +1928,10 @@ async def goto(interaction: discord.Interaction, room_name: str):
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
-    
+
     room = get_room_from_name(room_name)
 
     if room is None:
@@ -1940,8 +1943,10 @@ async def goto(interaction: discord.Interaction, room_name: str):
             currRoom = newRoom
 
     if currRoom is None:
-            await interaction.followup.send(f"*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
-            return
+        await interaction.followup.send(
+            "*You are not currently in a room. Please contact an admin if you believe this is a mistake.*"
+        )
+        return
 
     exits = currRoom.get_exits()
 
@@ -1971,7 +1976,7 @@ async def goto(interaction: discord.Interaction, room_name: str):
 
     player.set_room(room)
     save()
-    
+
     currChannel = client.get_channel(int(currRoom.get_id()))
 
     channel = client.get_channel(int(room.get_id()))
@@ -1979,7 +1984,7 @@ async def goto(interaction: discord.Interaction, room_name: str):
 
     if channel is None:
         await interaction.followup.send(f"*Could not find the channel for **{room_name}**. The room may need to be fixed — please contact an admin.*")
-    
+
     if currRoom is not None and currChannel is None:
         await interaction.followup.send(f"*Could not find the channel for **{currChannel.get_name()}**. The room may need to be fixed — please contact an admin.*")
 
@@ -1995,7 +2000,7 @@ async def goto(interaction: discord.Interaction, room_name: str):
 
     if currChannel is not None:
         await currChannel.set_permissions(user, read_messages = False)
-    
+
     await channel.set_permissions(user, read_messages = True)
 #endregion
 #region /exits
@@ -2006,21 +2011,21 @@ async def exits(interaction: discord.Interaction):
     player_id = interaction.user.id
     player = get_player_from_id(player_id)
     currRoom = get_room_from_id(channel_id)
-    
+
     if await check_paused(player, interaction):
         return
 
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     exits = currRoom.get_exits()
 
     if len(exits) == 0:
         await interaction.followup.send(f"***{player.get_name()}** looked at the exits in the room **{currRoom.get_name()}**:*\n\n`No exits found.`")
         return
-    
-    exitNames = []
+
+    exitNames: typing.List[str] = []
     for exit in exits:
         currExit = ''
         if exit.get_room1() == currRoom.get_name():
@@ -2028,9 +2033,9 @@ async def exits(interaction: discord.Interaction):
         else:
             currExit = exit.get_room1()
         if exit.get_locked_state():
-            currExit = currExit + ' (Locked)'
-        exitNames.append("`" + currExit + "`")
-    
+            currExit = f'{currExit} (Locked)'
+        exitNames.append(f"`{currExit}`")
+
     allExits = ', '.join(exitNames)
     await interaction.followup.send(f"***{player.get_name()}** looked at the exits in the room **{currRoom.get_name()}**:*\n\n{allExits}")
 #endregion
@@ -2045,24 +2050,24 @@ async def lockexit(interaction: discord.Interaction, exit_name: str, key_name: s
     player = get_player_from_id(player_id)
     channel_id = interaction.channel_id
     currRoom = get_room_from_id(channel_id)
-    
+
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     exits = currRoom.get_exits()
 
     if len(exits) == 0:
         await interaction.followup.send(f"*There are no exits in the room **{currRoom.get_name()}**.*")
         return
-    
+
     searchedExit = None
     searchedExitName = ''
     for exit in exits:
@@ -2111,24 +2116,24 @@ async def unlockexit(interaction: discord.Interaction, exit_name: str, key_name:
     player = get_player_from_id(player_id)
     channel_id = interaction.channel_id
     currRoom = get_room_from_id(channel_id)
-    
+
     if await check_paused(player, interaction):
         return
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
         return
 
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     exits = currRoom.get_exits()
 
     if len(exits) == 0:
         await interaction.followup.send(f"*There are no exits in the room **{currRoom.get_name()}**.*")
         return
-    
+
     searchedExit = None
     searchedExitName = ''
     for exit in exits:
@@ -2174,7 +2179,7 @@ async def lookplayer(interaction: discord.Interaction, player_name: str):
     await interaction.response.defer(thinking=True)
     player_id = interaction.user.id
     lookingPlayer = get_player_from_id(player_id)
-    
+
     if await check_paused(lookingPlayer, interaction):
         return
 
@@ -2184,15 +2189,13 @@ async def lookplayer(interaction: discord.Interaction, player_name: str):
     for p in playerdata.values():
         if simplify_string(p.get_name()) == simplified:
             player = p
-    
+
     if player is None:
         await interaction.followup.send(f"*Could not find player **{player_name}**. Please use `/players` to see a list of all players in the current room.*")
         return
 
     clothesList = player.get_clothes()
-    clothesNames = []
-    for clothing in clothesList:
-        clothesNames.append("`" + clothing.get_name() + "`")
+    clothesNames = [f"`{clothing.get_name()}`" for clothing in clothesList]
     allClothes = ', '.join(clothesNames)
 
     if lookingPlayer is None:
@@ -2250,25 +2253,25 @@ async def players(interaction: discord.Interaction):
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
 
-    playerList = []
+    playerList: typing.List[str] = []
     for thisPlayer in playerdata.values():
         currPlayer = ''
         if thisPlayer.get_room() is not None:
             if thisPlayer.get_room().get_name() == currRoom.get_name():
                 currPlayer = thisPlayer.get_name()
-                playerList.append("`" + currPlayer + "`")
+                playerList.append(f"`{currPlayer}`")
 
     allPlayers = ", ".join(playerList)
 
     if player is None:
-        if len(playerList) == 0:
+        if not playerList:
             await interaction.followup.send(f"*Looked at the players in the room **{currRoom.get_name()}**:*\n\n`No players found.`")
             return
         await interaction.followup.send(f"*Looked at the players in the room **{currRoom.get_name()}**:*\n\n{allPlayers}")
         return
-    
 
-    if len(playerList) == 0:
+
+    if not playerList:
         await interaction.followup.send(f"***{player.get_name()}** looked at the players in the room **{currRoom.get_name()}**:*\n\n`No players found.`")
         return
 
@@ -2286,18 +2289,24 @@ async def roll(interaction: discord.Interaction, max_num: int, passing_roll: int
     passingString = '.'
 
     if passing_roll != -1:
-        if rollNum >= passing_roll:
-            passingString = ', attempting to beat **' + str(passing_roll) + '**. Roll **succeeded**!'
-        else:
-            passingString = ', attempting to beat **' + str(passing_roll) + '**. Roll **failed**.'
-
+        passingString = (
+            f', attempting to beat **{passing_roll}**. Roll **succeeded**!'
+            if rollNum >= passing_roll
+            else f', attempting to beat **{passing_roll}**. Roll **failed**.'
+        )
+        
     if player is not None:
-        await interaction.followup.send(f"***{player.get_name()}** rolled **{str(rollNum)}** out of **{str(max_num)}**{passingString}*")
+        await interaction.followup.send(
+            f"***{player.get_name()}** rolled **{rollNum}** out of **{max_num}**{passingString}*"
+        )
         return
-    
+
     if passing_roll == -1:
-            passingString = ''
-    await interaction.followup.send(f"*Rolled **{str(rollNum)}** out of **{str(max_num)}**{passingString}*")
+        passingString = ''
+        
+    await interaction.followup.send(
+        f"*Rolled **{rollNum}** out of **{max_num}**{passingString}*"
+    )
     return
 #endregion
 #region /time
@@ -2340,28 +2349,36 @@ async def help(interaction: discord.Interaction):
 @app_commands.default_permissions()
 async def addplayer(interaction: discord.Interaction, player_name: str, player_id: str, desc: str = ''):
     await interaction.response.defer(thinking=True)
-    
+
     if player_name in playerdata.keys():
         await interaction.followup.send(f"*Player **{player_name}** already exists. Please use a different name.*")
         return
 
     try:
         player_id = int(player_id)
-    except:
-        await interaction.followup.send(f"*A user ID must be made up entirely of integers. Please enter a valid user ID.*")
-        return
-    
-    if interaction.guild.get_member(player_id) == None:
-        await interaction.followup.send(f"*Could not find <@{str(player_id)}>. Please enter a valid user ID.*")
+    except ValueError:
+        await interaction.followup.send(
+            "*A user ID must be made up entirely of integers. Please enter a valid user ID.*"
+        )
         return
 
-    if get_player_from_id(player_id) != None:
-        await interaction.followup.send(f"*<@{str(player_id)}> is already connected to the player **{get_player_name(player_id)}**.*")
+    if interaction.guild.get_member(player_id) is None:
+        await interaction.followup.send(
+            f"*Could not find <@{player_id}>. Please enter a valid user ID.*"
+        )
+        return
+
+    if player := get_player_from_id(player_id):
+        await interaction.followup.send(
+            f"*<@{player_id}> is already connected to the player **{player.get_name()}**.*"
+        )
         return
 
     playerdata[player_name] = Player(player_name, player_id, desc)
     save()
-    await interaction.followup.send(f"*Player **{player_name}** connected to <@{str(player_id)}>.*")
+    await interaction.followup.send(
+        f"*Player **{player_name}** connected to <@{player_id}>.*"
+    )
 #endregion
 #region /delplayer
 @client.tree.command(name = "delplayer", description = "Remove a player from the experience.", guild=GUILD)
@@ -2380,7 +2397,7 @@ async def delplayer(interaction: discord.Interaction, player_name: str):
             save()
             await interaction.followup.send(f"*Deleted player **{original_key}***.")
             return
-        except:
+        except Exception:
             await interaction.followup.send(f"*Failed to delete **{original_key}**. Please contact the bot's developer.*")
             return
     else:
@@ -2393,7 +2410,7 @@ async def listplayers(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
 
     if len(playerdata) == 0:
-        await interaction.followup.send(f"*There are currently no players.*")
+        await interaction.followup.send("*There are currently no players.*")
         return
 
     playerList = ''
@@ -2413,15 +2430,15 @@ async def listplayers(interaction: discord.Interaction):
 @app_commands.default_permissions()
 async def addroom(interaction: discord.Interaction, room_name: str, room_id: str, desc: str = ''):
     await interaction.response.defer(thinking=True)
-    
+
     try:
         room_id = int(room_id)
-    except:
-        await interaction.followup.send(f"*A room ID must be made up entirely of integers. Please enter a valid room ID.*")
+    except ValueError:
+        await interaction.followup.send("*A room ID must be made up entirely of integers. Please enter a valid room ID.*")
         return
 
-    if interaction.guild.get_channel(int(room_id)) == None:
-        await interaction.followup.send(f"*Could not find the channel <#{str(room_id)}>.*")
+    if interaction.guild.get_channel(room_id) is None:
+        await interaction.followup.send(f"*Could not find the channel <#{room_id}>.*")
         return
 
     for room in roomdata.values():
@@ -2429,15 +2446,19 @@ async def addroom(interaction: discord.Interaction, room_name: str, room_id: str
             await interaction.followup.send(f"*Room name **{room_name}** is already in use. Please give the room a separate name.*")
             return
         if room.get_id() == room_id:
-            await interaction.followup.send(f"*The channel <#{str(room_id)}> is already in use. Please give the room a separate channel.*")
+            await interaction.followup.send(
+                f"*The channel <#{room_id}> is already in use. Please give the room a separate channel.*"
+            )
             return
 
     roomdata[room_name] = Room(room_name, room_id, desc)
-    channel = client.get_channel(int(room_id))
+    channel = client.get_channel(room_id)
     await channel.edit(topic=desc)
     save()
 
-    await interaction.followup.send(f"*Room **{room_name}** connected to <#{str(room_id)}>.*")
+    await interaction.followup.send(
+        f"*Room **{room_name}** connected to <#{room_id}>.*"
+    )
 #endregion
 #region /delroom
 @client.tree.command(name = "delroom", description = "Remove a room from the experience.")
@@ -2459,7 +2480,7 @@ async def delroom(interaction: discord.Interaction, room_name: str):
             save()
             await interaction.followup.send(f"*Deleted room **{original_key}**.*")
             return
-        except:
+        except Exception:
             await interaction.followup.send(f"*Failed to delete room **{original_key}**. Please contact the bot's developer.*")
             return
     
@@ -2541,7 +2562,7 @@ async def delexit(interaction: discord.Interaction, first_room_name: str, second
     if simplified_room_two not in simplified_keys:
         await interaction.followup.send(f"*Room **{second_room_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
         return
-    
+
     room_one = get_room_from_name(simplified_room_one)
     room_two = get_room_from_name(simplified_room_two)
     original_room_one = simplified_keys[simplified_room_one]
@@ -2562,9 +2583,8 @@ async def delexit(interaction: discord.Interaction, first_room_name: str, second
         if exit.get_room1() == room_one.get_name():
             if simplify_string(exit.get_room2()) == simplify_string(first_room_name):
                 exit = exit
-        else:
-            if simplify_string(exit.get_room1()) == simplify_string(first_room_name):
-                exit = exit
+        elif simplify_string(exit.get_room1()) == simplify_string(first_room_name):
+            exit = exit
 
     room_one.del_exit(exit)
     room_two.del_exit(exit)
@@ -2590,9 +2610,9 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
     if simplified_player not in simplified_player_keys:
         await interaction.followup.send(f"*Player **{player_name}** could not be found. Please use `/listplayers` to see all current players.*")
         return
-    
+
     if simplified_room not in simplified_room_keys:
-        await interaction.followup.send(f"*Room `" + {room_name} + "` could not be found. Please use `/listrooms` to see all current rooms.*")
+        await interaction.followup.send(f"*Room `{room_name}` could not be found. Please use `/listrooms` to see all current rooms.*")
         return
 
     player = get_player_from_name(player_name)
@@ -2602,7 +2622,7 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
     if room is None:
         await interaction.followup.send(f"*Room **{room_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
         return
-    
+
     player.set_room(room)
     save()
 
@@ -2616,7 +2636,7 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
 
     if channel is None:
         await interaction.followup.send(f"*Could not find the channel for **{room_name}**. Is there an error in the ID?*")
-    
+
     if prevRoom is not None and prevChannel is None:
         await interaction.followup.send(f"*Could not find the channel for **{prevRoom.get_name()}**. Is there an error in the ID?*")
 
@@ -2624,7 +2644,7 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
         await interaction.followup.send(f"*Could not find the user <@{player.get_id()}>. Is there an error in the ID?*")
 
     await interaction.followup.send(f"*Dragged **{player.get_name()}** to **{room.get_name()}**.*")
-    
+
     if prevChannel is not None:
         await prevChannel.send(f"***{player.get_name()}** was dragged to **{room.get_name()}**.*")
         await channel.send(f"***{player.get_name()}** entered from **{prevRoom.get_name()}**.*")
@@ -2633,7 +2653,7 @@ async def drag(interaction: discord.Interaction, player_name: str, room_name: st
 
     if prevChannel is not None:
         await prevChannel.set_permissions(user, read_messages = False)
-    
+
     await channel.set_permissions(user, read_messages = True)
 #endregion 
 #region /dragall
@@ -2683,7 +2703,7 @@ async def dragall(interaction: discord.Interaction, room_name: str):
 @app_commands.default_permissions()
 async def findplayer(interaction: discord.Interaction, player_name: str):
     await interaction.response.defer(thinking=True)
-    
+
     simplified_player = simplify_string(player_name)
     simplified_player_keys = {simplify_string(key): key for key in playerdata.keys()}
 
@@ -2698,7 +2718,9 @@ async def findplayer(interaction: discord.Interaction, player_name: str):
         await interaction.followup.send(f"***{player.get_name()}** is not yet in a room.*")
         return
 
-    await interaction.followup.send(f"***{player.get_name()}** is currently in the room **{room.get_name()}**.*\n\n`Jump`: <#" + str(room.get_id()) + ">")
+    await interaction.followup.send(
+        f"***{player.get_name()}** is currently in the room **{room.get_name()}**.*\n\n`Jump`: <#{str(room.get_id())}>"
+    )
 #endregion
 #region /findroom 
 @client.tree.command(name = "findroom", description = "Tells what channel is connected to a room.")
@@ -2706,14 +2728,16 @@ async def findplayer(interaction: discord.Interaction, player_name: str):
 @app_commands.default_permissions()
 async def findroom(interaction: discord.Interaction, room_name: str):
     await interaction.response.defer(thinking=True)
-    
+
     room = get_room_from_name(room_name)
 
     if room is None:
         await interaction.followup.send(f"*Could not find the room **{room_name}***")
         return
 
-    await interaction.followup.send(f"`{room.get_name()}`: <#" + str(room.get_id()) + ">")
+    await interaction.followup.send(
+        f"`{room.get_name()}`: <#{str(room.get_id())}>"
+    )
 #endregion
 #region /additem
 @client.tree.command(name = "additem", description = "Add an item into the experience.", guild=GUILD)
@@ -2736,21 +2760,22 @@ async def additem(interaction: discord.Interaction, container: app_commands.Choi
 
     ifNone = ''
     containerType = ''
-    amountStr = 'the'
     containerVar = None
     currentWeight = 0
     capacity = 0
     checkCapacity = False
 
     if amount < 1:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number greater than one.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number greater than one.*"
+        )
         return
 
     if container.value == 0:
         ifNone = f"*Room **{container_name}** could not be found. Please use `/listrooms` to see all current rooms.*"
         containerType = "room"
         containerVar = get_room_from_name(container_name)
-    
+
     elif container.value == 1:
         ifNone = f"*Player **{container_name}** could not be found. Please use `/listplayers` to see all current players.*"
         containerType = "inventory of"
@@ -2769,8 +2794,10 @@ async def additem(interaction: discord.Interaction, container: app_commands.Choi
 
     elif container.value == 3:
 
-        if object_room_name == '':
-            await interaction.followup.send(f"*To add an item to an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
+        if not object_room_name:
+            await interaction.followup.send(
+                "*To add an item to an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*"
+            )
             return
 
         room = get_room_from_name(object_room_name)
@@ -2784,7 +2811,7 @@ async def additem(interaction: discord.Interaction, container: app_commands.Choi
                 containerVar = obj
 
         ifNone = f"*Object **{container_name}** could not be found. Please use `/listobjects` to see the objects in a room.*"
-        
+
         containerType = "object"
         if containerVar.get_storage() != -1:
             checkCapacity = True
@@ -2792,35 +2819,31 @@ async def additem(interaction: discord.Interaction, container: app_commands.Choi
     if containerVar is None:
         await interaction.followup.send(ifNone)
         return
-    
-    addedWeight = 0
+
     if checkCapacity:
         if containerType == "object":
             if (amount + len(containerVar.get_items())) > containerVar.get_storage():
                 await interaction.followup.send(f"*Could not add **{item_name}** to the object **{containerVar.get_name()}**: Maximum storage reached.*")
                 return
         else:
-            for i in range(amount):
-                addedWeight += weight
+            addedWeight = sum(weight for _ in range(amount))
             if (addedWeight + currentWeight) > capacity:
                 await interaction.followup.send(f"*Could not add **{item_name}** to the {containerType} **{containerVar.get_name()}**: Maximum weight reached.*")
                 return
 
-    if amount > 1:
-        amountStr = f"**{amount}** of the"
-
+    amountStr = f"**{amount}** of the" if amount > 1 else 'the'
     # self, name: str, weight: float, wearable: bool, desc: str = ''
     item: Item = Item(item_name, weight, wearable, desc)
-    
+
     if container.value == 2:
         if not item.get_wearable_state():
             await interaction.followup.send(f"*Could not add **{item_name}** to **{containerVar.get_name()}**'s clothes: Item must be wearable.*")
             return
-        for i in range(amount):
+        for _ in range(amount):
             containerVar.add_clothes(item)
 
     else:
-        for i in range(amount):
+        for _ in range(amount):
             containerVar.add_item(item)
 
     save()
@@ -2846,14 +2869,16 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
     containerVar = None
 
     if amount < 1:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number greater than one.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number greater than one.*"
+        )
         return
 
     if container.value == 0:
         ifNone = f"*Room **{container_name}** could not be found. Please use `/listrooms` to see all current rooms.*"
         containerType = "room"
         containerVar = get_room_from_name(container_name)
-    
+
     elif container.value == 1:
         ifNone = f"*Player **{container_name}** could not be found. Please use `/listplayers` to see all current players.*"
         containerType = "player"
@@ -2866,8 +2891,10 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
 
     elif container.value == 3:
 
-        if object_room_name == '':
-            await interaction.followup.send(f"*To add an item to an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
+        if not object_room_name:
+            await interaction.followup.send(
+                "*To add an item to an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*"
+            )
             return
 
         room = get_room_from_name(object_room_name)
@@ -2881,7 +2908,7 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
                 containerVar = obj
 
         ifNone = f"*Object **{container_name}** could not be found. Please use `/listobjects` to see the objects in a room.*"
-        
+
         containerType = "object"
 
     if containerVar is None:
@@ -2896,7 +2923,7 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
     if len(itemList) == 0:
         await interaction.followup.send("*No items could be found in that container.*")
         return
-    
+
     searchedItem = None
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(item_name):
@@ -2906,18 +2933,13 @@ async def delitem(interaction: discord.Interaction, container: app_commands.Choi
         await interaction.followup.send(f"*Could not find the item **{item_name}**.*")
         return
 
-    if container.value == 2:
-        for i in range(amount):
+    for _ in range(amount):
+        if container.value == 2:
             containerVar.del_clothes(searchedItem)
-    else:
-        for i in range(amount):
+        else:
             containerVar.del_item(searchedItem)
 
-    if amount > 1:
-        amountStr = f'**{amount}** of the'
-    else:
-        amountStr = 'the'
-
+    amountStr = f'**{amount}** of the' if amount > 1 else 'the'
     save()
     await interaction.followup.send(f"*Deleted {amountStr} item **{searchedItem.get_name()}** from the {containerType} **{containerVar.get_name()}**.*")
 #endregion
@@ -3033,7 +3055,7 @@ async def forcetake(interaction: discord.Interaction, player_name: str, item_nam
     player = get_player_from_name(player_name)
     currRoom = player.get_room()
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send(f"***{player_name}** is not a valid player. Please use `/listplayers` to see a list of all the current players.*.")
         return
 
@@ -3044,7 +3066,7 @@ async def forcetake(interaction: discord.Interaction, player_name: str, item_nam
     invWeight = player.get_weight()
     itemList = currRoom.get_items()
 
-    if amount == 0 or amount == 1:
+    if amount in {0, 1}:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
                 if (invWeight + item.get_weight()) > max_carry_weight:
@@ -3059,40 +3081,48 @@ async def forcetake(interaction: discord.Interaction, player_name: str, item_nam
         return
 
     if amount < 0:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number.*"
+        )
         return
 
-    if amount != 0 or amount != 1:
-        itemsFound = []
-        searchedItem = None
-        for item in itemList:
-            if simplify_string(item_name) == simplify_string(item.get_name()):
-                searchedItem = item
-                itemsFound.append(item)
-        if len(itemsFound) == 0:
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*")
-            return
-        if len(itemsFound) < amount:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*")
-            return
-        try:
-            newCarryWeight = 0
-            for i in range(amount):
-                newCarryWeight += itemsFound[i].get_weight()
-            if (invWeight + newCarryWeight) > get_max_carry_weight():
-                await interaction.followup.send(f"***{player.get_name()}** tried to take **{str(amount)}** of the item **{searchedItem.get_name()}**, but they could not fit that much into their inventory.*")
-                return
-            for i in range(amount):
-                player.add_item(itemsFound[i])
-                currRoom.del_item(itemsFound[i])
-            save()
-            await interaction.followup.send(f"***{player.get_name()}** took **{str(amount)}** of the item **{searchedItem.get_name()}***.")
-            return
-        except:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*")
-            return
+    itemsFound: typing.List[Item] = []
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            searchedItem = item
+            itemsFound.append(searchedItem)
 
-    await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*")
+    if not itemsFound or not searchedItem:
+        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*")
+        return
+
+    if len(itemsFound) < amount:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*"
+        )
+        return
+
+    try:
+        newCarryWeight = sum(itemsFound[i].get_weight() for i in range(amount))
+        if (invWeight + newCarryWeight) > get_max_carry_weight():
+            await interaction.followup.send(
+                f"***{player.get_name()}** tried to take **{amount}** of the item **{searchedItem.get_name()}**, but they could not fit that much into their inventory.*"
+            )
+            return
+        for i in range(amount):
+            player.add_item(itemsFound[i])
+            currRoom.del_item(itemsFound[i])
+        save()
+        await interaction.followup.send(
+            f"***{player.get_name()}** took **{amount}** of the item **{searchedItem.get_name()}***."
+        )
+        return
+    except Exception:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/listitems` to see a list of items in the player's room.*"
+        )
+        return
 #endregion
 #region /forcedrop
 @client.tree.command(name = "forcedrop", description = "Drop an item from a player's inventory into their current room.", guild=GUILD)
@@ -3105,7 +3135,7 @@ async def forcedrop(interaction: discord.Interaction, player_name: str, item_nam
     player = get_player_from_name(player_name)
     currRoom = player.get_room()
 
-    if player == None or not player.get_name() in playerdata.keys():
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send(f"***{player_name}** is not a valid player. Please use `/listplayers` to see a list of all the current players.*.")
         return
 
@@ -3115,7 +3145,7 @@ async def forcedrop(interaction: discord.Interaction, player_name: str, item_nam
 
     itemList = player.get_items()
 
-    if amount == 0 or amount == 1:
+    if amount in {0, 1}:
         for item in itemList:
             if simplify_string(item_name) == simplify_string(item.get_name()):
                 player.del_item(item)
@@ -3127,32 +3157,42 @@ async def forcedrop(interaction: discord.Interaction, player_name: str, item_nam
         return
 
     if amount < 0:
-        await interaction.followup.send(f"***{str(amount)}** is an invalid input; please use a positive number.*")
+        await interaction.followup.send(
+            f"***{amount}** is an invalid input; please use a positive number.*"
+        )
         return
 
-    if amount != 0 or amount != 1:
-        itemsFound = []
-        searchedItem = None
-        for item in itemList:
-            if simplify_string(item_name) == simplify_string(item.get_name()):
-                searchedItem = item
-                itemsFound.append(item)
-        if len(itemsFound) == 0:
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*")
-            return
-        if len(itemsFound) < amount:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*")
-            return
-        try:
-            for i in range(amount):
-                player.del_item(itemsFound[i])
-                currRoom.add_item(itemsFound[i])
-            save()
-            await interaction.followup.send(f"***{player.get_name()}** dropped **{str(amount)}** of the item **{searchedItem.get_name()}**.*")
-            return
-        except:
-            await interaction.followup.send(f"*Could not find **{str(amount)}** of the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*")
-            return
+    itemsFound: typing.List[Item] = []
+    searchedItem = None
+    for item in itemList:
+        if simplify_string(item_name) == simplify_string(item.get_name()):
+            searchedItem = item
+            itemsFound.append(searchedItem)
+
+    if not itemsFound or not searchedItem:
+        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*")
+        return
+
+    if len(itemsFound) < amount:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*"
+        )
+        return
+
+    try:
+        for i in range(amount):
+            player.del_item(itemsFound[i])
+            currRoom.add_item(itemsFound[i])
+        save()
+        await interaction.followup.send(
+            f"***{player.get_name()}** dropped **{amount}** of the item **{searchedItem.get_name()}**.*"
+        )
+        return
+    except Exception:
+        await interaction.followup.send(
+            f"*Could not find **{amount}** of the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*"
+        )
+        return
 
     await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a player's inventory.*")
 #endregion
@@ -3169,7 +3209,7 @@ async def forcewear(interaction: discord.Interaction, player_name: str, containe
     await interaction.response.defer(thinking=True)
     player = get_player_from_name(player_name)
     currRoom = player.get_room()
-    
+
     midStr = ''
     midStr2 = ''
     containerVar = None
@@ -3179,7 +3219,7 @@ async def forcewear(interaction: discord.Interaction, player_name: str, containe
         midStr = 'take and wear'
         midStr2 = 'took and wore'
 
-        if currRoom is None:
+        if containerVar is None:
             await interaction.followup.send(f"***{player_name}** is not currently in a room. Please use `/drag` to bring them into a room first.*.")
             return
 
@@ -3187,14 +3227,14 @@ async def forcewear(interaction: discord.Interaction, player_name: str, containe
         containerVar = player
         midStr = 'wear'
         midStr2 = 'wore'
-    
-    if player == None or not player.get_name() in playerdata.keys():
+
+    if player is None or player.get_name() not in playerdata.keys():
         await interaction.followup.send(f"***{player_name}** is not a valid player. Please use `/listplayers` to see a list of all the current players.*.")
         return
 
     clothesWeight = player.get_clothes_weight()
     itemList = containerVar.get_items()
-    
+
     for item in itemList:
         if simplify_string(item_name) == simplify_string(item.get_name()):
             if item.get_wearable_state():
@@ -3208,11 +3248,10 @@ async def forcewear(interaction: discord.Interaction, player_name: str, containe
                 containerVar.del_item(item)
                 save()
                 await interaction.followup.send(f"***{player.get_name()}** {midStr2} the item **{item.get_name()}**.*")
-                return
             else:
                 await interaction.followup.send(f"***{player.get_name()}** tried to {midStr} the item **{item.get_name()}**, but it was not a piece of clothing.*")
-                return
-
+            return
+        
     await interaction.followup.send(f"Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a container.*")
 #endregion
 #region /forceundress
@@ -3228,7 +3267,7 @@ async def forceundress(interaction: discord.Interaction, player_name: str, conta
     await interaction.response.defer(thinking=True)
     player = get_player_from_name(player_name)
     currRoom = player.get_room()
-    
+
     midStr = ''
     midStr2 = ''
     containerVar = None
@@ -3269,12 +3308,10 @@ async def forceundress(interaction: discord.Interaction, player_name: str, conta
                 containerVar.add_item(item)
                 save()
                 await interaction.followup.send(f"***{player.get_name()}** {midStr2} the item **{item.get_name()}**.*")
-                return
             else:
                 await interaction.followup.send(f"***{player.get_name()}** tried to {midStr} **{item.get_name()}**, but it was not a piece of clothing... how are they wearing it?*")
-                return
-
-
+            return
+        
     await interaction.followup.send(f"*Could not find **{item_name}**. Please use `/listclothes` to see the clothes a player is wearing.*")
 #endregion
 #region /listitems
@@ -3311,7 +3348,7 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
 
         endMsg = f"**{containerVar.get_name()}**'s inventory"
 
-    
+
     elif container.value == 2:
         containerVar = get_player_from_name(container_name)
 
@@ -3324,8 +3361,10 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
 
     elif container.value == 3:
 
-        if object_room_name == '':
-            await interaction.followup.send(f"*To look inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
+        if not object_room_name:
+            await interaction.followup.send(
+                "*To look inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*"
+            )
             return
 
         room = get_room_from_name(object_room_name)
@@ -3341,22 +3380,19 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
         if containerVar is None:
             await interaction.followup.send(f"*Object **{container_name}** could not be found. Please use `/listobjects` to see the objects in a room.*")
             return
-        
+
         endMsg = f"the object **{containerVar.get_name()}** in the room **{room.get_name()}**"
 
     if container.value == 2:
         itemList = containerVar.get_clothes()
     else:
         itemList = containerVar.get_items()
-    
+
     if len(itemList) == 0:
         await interaction.followup.send(f"*Looked inside of {endMsg}:*\n\n`No items found.`")
         return
 
-    itemNames = []
-    for item in itemList:
-        itemNames.append("`" + item.get_name() + "`")
-
+    itemNames = [f"`{item.get_name()}`" for item in itemList]
     allItems = ', '.join(itemNames)
 
     await interaction.followup.send(f"*Looked inside of {endMsg}:*\n\n{allItems}")
@@ -3365,21 +3401,21 @@ async def listitems(interaction: discord.Interaction, container: app_commands.Ch
 @client.tree.command(name = "listexits", description = "List all locations that are connected to a room.")
 @app_commands.describe(room_name = "The name of the room you wish to see the exits of.")
 @app_commands.default_permissions()
-async def exits(interaction: discord.Interaction, room_name: str):
+async def listexits(interaction: discord.Interaction, room_name: str):
     await interaction.response.defer(thinking=True)
     currRoom = get_room_from_name(room_name)
 
     if currRoom is None:
         await interaction.followup.send(f"*Could not find the room **{room_name}**. Please use `/listrooms` to see a list of all current rooms.*")
         return
-    
+
     exits = currRoom.get_exits()
 
     if len(exits) == 0:
         await interaction.followup.send(f"*Looked at the exits in the room **{currRoom.get_name()}**:*\n\n`No exits found.`")
         return
-    
-    exitNames = []
+
+    exitNames: typing.List[str] = []
     for exit in exits:
         currExit = ''
         if exit.get_room1() == currRoom.get_name():
@@ -3387,9 +3423,9 @@ async def exits(interaction: discord.Interaction, room_name: str):
         else:
             currExit = exit.get_room1()
         if exit.get_locked_state():
-            currExit = currExit + ' (Locked)'
-        exitNames.append("`" + currExit + "`")
-    
+            currExit = f'{currExit} (Locked)'
+        exitNames.append(f"`{currExit}`")
+
     allExits = ', '.join(exitNames)
     await interaction.followup.send(f"*Looked at the exits in the room **{currRoom.get_name()}**:*\n\n{allExits}")
 
@@ -3407,16 +3443,13 @@ async def listobjects(interaction: discord.Interaction, room_name: str):
         return
 
     objList = currRoom.get_objects()
-    
-    objNames = []
-    for obj in objList:
-        objNames.append("`" + obj.get_name() + "`")
-
+    objNames = [f"`{obj.get_name()}`" for obj in objList]
     allObjs = ', '.join(objNames)
 
     if len(objList) == 0:
-            await interaction.followup.send(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n`No objects found.`")
-            return
+        await interaction.followup.send(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n`No objects found.`")
+        return
+    
     await interaction.followup.send(f"*Looked at the objects in the room **{currRoom.get_name()}**:*\n\n{allObjs}")
 #endregion
 #region /seeitem
@@ -3433,7 +3466,7 @@ async def listobjects(interaction: discord.Interaction, room_name: str):
 @app_commands.default_permissions()
 async def seeitem(interaction: discord.Interaction, container: app_commands.Choice[int], container_name: str, item_name: str, object_room_name: str = ''):
     await interaction.response.defer(thinking=True)
-    
+
     endMsg = ''
     containerVar = None
     if container.value == 0:
@@ -3454,7 +3487,7 @@ async def seeitem(interaction: discord.Interaction, container: app_commands.Choi
 
         endMsg = f"**{containerVar.get_name()}**'s inventory"
 
-    
+
     elif container.value == 2:
         containerVar = get_player_from_name(container_name)
 
@@ -3467,8 +3500,10 @@ async def seeitem(interaction: discord.Interaction, container: app_commands.Choi
 
     elif container.value == 3:
 
-        if object_room_name == '':
-            await interaction.followup.send(f"*To look inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
+        if not object_room_name:
+            await interaction.followup.send(
+                "*To look inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*"
+            )
             return
 
         room = get_room_from_name(object_room_name)
@@ -3484,23 +3519,23 @@ async def seeitem(interaction: discord.Interaction, container: app_commands.Choi
         if containerVar is None:
             await interaction.followup.send(f"*Object **{container_name}** could not be found. Please use `/listobjects` to see the objects in a room.*")
             return
-        
+
         endMsg = f"the object **{containerVar.get_name()}** in the room **{room.get_name()}**"
 
     if container.value == 2:
         itemList = containerVar.get_clothes()
     else:
         itemList = containerVar.get_items()
-    
+
     searchedItem = None
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(item_name):
             searchedItem = item
-    
+
     if searchedItem is None:
         await interaction.followup.send(f"*Could not find the item **{item_name}** in {endMsg}.*")
         return
-    
+
     if searchedItem.get_desc() == '':
         await interaction.followup.send(f"*Looked at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{str(searchedItem.get_weight())}`\n__`Wearable`__: `{str(searchedItem.get_wearable_state())}`\n\nItem has no description.")
         return
@@ -3519,27 +3554,23 @@ async def seeobject(interaction: discord.Interaction, room_name: str, object_nam
     if currRoom is None:
         await interaction.followup.send(f"*Room **{room_name}** could not be found. Please use `/listrooms` to see a list of all current rooms.*")
         return
-    
+
     objList = currRoom.get_objects()
 
     if len(objList) == 0:
         await interaction.followup.send("*No objects could be found in the room.*")
         return
-    
+
     searchedObj = None
     for obj in objList:
         if simplify_string(obj.get_name()) == simplify_string(object_name):
             searchedObj = obj
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the item **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
-    is_locked = ''
-    if searchedObj.get_locked_state():
-        is_locked = 'Locked'
-    else:
-        is_locked = 'Opened'
+
+    is_locked = 'Locked' if searchedObj.get_locked_state() else 'Opened'
 
     storage_amt = ''
     used_storage = ''
@@ -3547,17 +3578,20 @@ async def seeobject(interaction: discord.Interaction, room_name: str, object_nam
         storage_amt = '∞'
     else:
         storage_amt = str(searchedObj.get_storage())
-    
-    used_storage = str(len(searchedObj.get_items())) + '/'
 
-    keyName = str(searchedObj.get_key_name())
-    if keyName == '':
-        keyName = "None"
+    used_storage = f'{len(searchedObj.get_items())}/'
+
+    keyName = str(searchedObj.get_key_name()) or "None"
 
     if searchedObj.get_desc() == '':
-        await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n`Object has no description.`")
+        await interaction.followup.send(
+            f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n`Object has no description.`"
+        )
         return
-    await interaction.followup.send(f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{str(storage_amt)}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n{searchedObj.get_desc()}")
+
+    await interaction.followup.send(
+        f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n{searchedObj.get_desc()}"
+    )
     return
 #endregion
 #region /seeexit
@@ -3573,11 +3607,11 @@ async def seeexit(interaction: discord.Interaction, room_one_name: str, room_two
     if room_one is None:
         await interaction.followup.send(f"*Could not find the room **{room_one_name}**. Please use `/listrooms` to see a list of all current rooms.")
         return
-    
+
     if room_two is None:
         await interaction.followup.send(f"*Could not find the room **{room_two_name}**. Please use `/listrooms` to see a list of all current rooms.")
         return
-    
+
     exitsOne = room_one.get_exits()
     exitsTwo = room_two.get_exits()
 
@@ -3593,16 +3627,12 @@ async def seeexit(interaction: discord.Interaction, room_one_name: str, room_two
         if exit.get_room1() == room_one.get_name():
             if simplify_string(exit.get_room2()) == simplify_string(room_one_name):
                 exit = exit
-        else:
-            if simplify_string(exit.get_room1()) == simplify_string(room_one_name):
-                exit = exit
+        elif simplify_string(exit.get_room1()) == simplify_string(room_one_name):
+            exit = exit
 
     isLocked = ''
-    if exit.get_locked_state():
-        isLocked = 'locked'
-    else:
-        isLocked = 'opened'
-
+    isLocked = 'locked' if exit.get_locked_state() else 'opened'
+    
     if exit.get_key_name() == '':
         hasKey = "has no key"
     else:
@@ -3624,7 +3654,7 @@ async def editplayer(interaction: discord.Interaction, player_name: str, new_nam
         await interaction.followup.send(f"*Could not find the player **{player_name}**. Please use `/listplayers` to get a list of all current players.*")
 
     player_id = player.get_id()
-    
+
     edited = ''
 
     if new_name != '':
@@ -3632,17 +3662,17 @@ async def editplayer(interaction: discord.Interaction, player_name: str, new_nam
         player.edit_name(new_name)
         playerdata[new_name] = playerdata[old_name]
         del playerdata[old_name]
-        edited = edited + f" name to **{new_name}**"
+        edited += f" name to **{new_name}**"
     if new_desc != '':
         player.edit_desc(new_desc)
         if edited == '':
-            edited = edited + ' description'
+            edited = f'{edited} description'
         else:
-            edited = edited + ' and edited their description'
-    
-    edited = edited + "."
-    
-    if new_name == '' and new_desc == '':
+            edited = f'{edited} and edited their description'
+
+    edited = f"{edited}."
+
+    if not new_name and not new_desc:
         await interaction.followup.send(f"*Please enter a value for either `new_name` or `new_desc` to edit the player **{player.get_name}**.*")
         return
 
@@ -3658,13 +3688,13 @@ async def editplayer(interaction: discord.Interaction, player_name: str, new_nam
 async def editroom(interaction: discord.Interaction, room_name: str, new_name: str = '', new_desc: str = ''):
     await interaction.response.defer(thinking=True)
     room = get_room_from_name(room_name)
-    
+
     if room is None:
         await interaction.followup.send(f"*Could not find the room **{room_name}**. Please use `/listrooms` to get a list of the current rooms.*")
         return
 
     room_id = room.get_id()
-    
+
     edited = ''
 
     if new_name != '':
@@ -3678,19 +3708,19 @@ async def editroom(interaction: discord.Interaction, room_name: str, new_name: s
         room.edit_name(new_name)
         roomdata[new_name] = roomdata[old_name]
         del roomdata[old_name]
-        edited = edited + f" name to **{new_name}**"
+        edited += f" name to **{new_name}**"
     if new_desc != '':
         room.edit_desc(new_desc)
         channel = client.get_channel(int(room_id))
         await channel.edit(topic=new_desc)
         if edited == '':
-            edited = edited + ' description'
+            edited = f'{edited} description'
         else:
-            edited = edited + ' and edited its description'
-    
-    edited = edited + "."
+            edited = f'{edited} and edited its description'
 
-    if new_name == '' and new_desc == '':
+    edited = f"{edited}."
+
+    if not new_name and not new_desc:
         await interaction.followup.send(f"*Please enter a value for either `new_name` or `new_desc` to edit the room **{room.get_name}**.*")
         return
 
@@ -3736,7 +3766,7 @@ async def edititem(interaction: discord.Interaction, container: app_commands.Cho
 
         endMsg = f"**{containerVar.get_name()}**'s inventory"
 
-    
+
     elif container.value == 2:
         containerVar = get_player_from_name(container_name)
 
@@ -3749,8 +3779,8 @@ async def edititem(interaction: discord.Interaction, container: app_commands.Cho
 
     elif container.value == 3:
 
-        if object_room_name == '':
-            await interaction.followup.send(f"*To edit an item inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
+        if not object_room_name:
+            await interaction.followup.send("*To edit an item inside of an object, you must specify the room name as well. Please use `/listrooms` to see all current rooms.*")
             return
 
         room = get_room_from_name(object_room_name)
@@ -3766,55 +3796,60 @@ async def edititem(interaction: discord.Interaction, container: app_commands.Cho
         if containerVar is None:
             await interaction.followup.send(f"*Object **{container_name}** could not be found. Please use `/listobjects` to see the objects in a room.*")
             return
-        
+
         endMsg = f"the object **{containerVar.get_name()}** in the room **{room.get_name()}**"
 
     if container.value == 2:
         itemList = containerVar.get_clothes()
     else:
         itemList = containerVar.get_items()
-    
+
     searchedItem = None
     for item in itemList:
         if simplify_string(item.get_name()) == simplify_string(item_name):
             searchedItem = item
-    
+
     if searchedItem is None:
         await interaction.followup.send(f"*Could not find the item **{item_name}** in {endMsg}.*")
         return
-    
 
-    strs = []
+
+    item_strs: typing.List[str] = []
     if new_name != '':
         searchedItem.edit_name(new_name)
         nameStr = 'name'
-        strs.append(nameStr)
+        item_strs.append(nameStr)
     if new_desc != '':
         searchedItem.edit_desc(new_desc)
         descStr = 'description'
-        strs.append(descStr)
+        item_strs.append(descStr)
     if is_wearable != None:
         searchedItem.switch_wearable_state(is_wearable)
         wearStr = 'wearable state'
-        strs.append(wearStr)
+        item_strs.append(wearStr)
     if new_weight != -1:
         searchedItem.edit_weight(new_weight)
         weightStr = 'weight'
-        strs.append(weightStr)
+        item_strs.append(weightStr)
 
-    if new_name == '' and new_desc == '' and is_wearable == None and new_weight == -1:
+    if (
+        not new_name
+        and not new_desc
+        and is_wearable is None
+        and new_weight == -1
+    ):
         await interaction.followup.send(f"*Please select an option and enter a new value to edit the item **{searchedItem.get_name}**.*")
         return
 
     edited = ''
-    if len(strs) == 0:
+    if not item_strs:
         edited = ''
-    elif len(strs) == 1:
-        edited = strs[0]
-    elif len(strs) == 2:
-        edited = strs[0] + " and " + strs[1]
+    elif len(item_strs) == 1:
+        edited = item_strs[0]
+    elif len(item_strs) == 2:
+        edited = f"{item_strs[0]} and {item_strs[1]}"
     else:
-        edited = ", ".join(strs[:-1]) + f", and {strs[-1]}"
+        edited = ", ".join(item_strs[:-1]) + f", and {item_strs[-1]}"
 
     save()
     await interaction.followup.send(f"*Changed the item **{searchedItem.get_name()}**'s {edited}.*")
@@ -3834,11 +3869,11 @@ async def editexit(interaction: discord.Interaction, room_one_name: str, room_tw
     if room_one is None:
         await interaction.followup.send(f"*Could not find the room **{room_one_name}**. Please use `/listrooms` to see a list of all current rooms.")
         return
-    
+
     if room_two is None:
         await interaction.followup.send(f"*Could not find the room **{room_two_name}**. Please use `/listrooms` to see a list of all current rooms.")
         return
-    
+
     exitsOne = room_one.get_exits()
     exitsTwo = room_two.get_exits()
 
@@ -3860,25 +3895,27 @@ async def editexit(interaction: discord.Interaction, room_one_name: str, room_tw
                 exit = exit
                 break
 
-    if new_locked_state == None and new_key == '':
-        await interaction.followup.send(f"*Please select an option and enter a new value to edit an exit.*")
+    if new_locked_state is None and not new_key:
+        await interaction.followup.send(
+            "*Please select an option and enter a new value to edit an exit.*"
+        )
         return
 
-    strs = []
+    ouput_strs: typing.List[str] = []
     if new_locked_state != None:
         exit.switch_locked_state(new_locked_state)
-        strs.append("locked state")
+        ouput_strs.append("locked state")
     if new_key != '':
         exit.edit_key_name(new_key)
-        strs.append("key name")
-    
+        ouput_strs.append("key name")
+
     edited = ''
-    if len(strs) == 0:
+    if not ouput_strs:
         edited = ''
-    elif len(strs) == 1:
-        edited = strs[0]
+    elif len(ouput_strs) == 1:
+        edited = ouput_strs[0]
     else:
-        edited = strs[0] + " and " + strs[1]
+        edited = f"{ouput_strs[0]} and {ouput_strs[1]}"
 
     save()
     await interaction.followup.send(f"*Changed the exit between **{room_one.get_name()}** and **{room_two.get_name()}**'s {edited}.*")
@@ -3899,61 +3936,72 @@ async def editobject(interaction: discord.Interaction, room_name: str, object_na
     currRoom = get_room_from_name(room_name)
 
     if new_storage <= -3:
-        await interaction.followup.send((f"***{str(new_storage)}** is an invalid storage input; please use a positive number or -1 for infinity.*"))
+        await interaction.followup.send(
+            f"***{new_storage}** is an invalid storage input; please use a positive number or -1 for infinity.*"
+        )
         return
 
     if currRoom is None:
         await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return
-    
+
     objList = currRoom.get_objects()
 
     if len(objList) == 0:
         await interaction.followup.send("*No objects could be found in the room.*")
         return
-    
+
     searchedObj = None
     for obj in objList:
         if simplify_string(obj.get_name()) == simplify_string(object_name):
             searchedObj = obj
-    
+
     if searchedObj is None:
         await interaction.followup.send(f"*Could not find the item **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return
-    
-    if new_name == '' and new_desc == '' and new_container_state == None and new_locked_state == None and new_key == '' and new_storage == -2:
-        await interaction.followup.send(f"*Please select an option and enter a new value to edit an exit.*")
+
+    if (
+        not new_name
+        and not new_desc
+        and new_container_state is None
+        and new_locked_state is None
+        and not new_key
+        and new_storage == -2
+    ):
+        await interaction.followup.send(
+            "*Please select an option and enter a new value to edit an exit.*"
+        )
         return
-    
-    str = []
+
+    output_str: typing.List[str] = []
     if new_name != '':
         searchedObj.edit_name(new_name)
-        str.append("name")
+        output_str.append("name")
     if new_desc != '':
         searchedObj.edit_desc(new_desc)
-        str.append("description")
+        output_str.append("description")
     if new_container_state != None:
         searchedObj.switch_container_state(new_container_state)
-        str.append("container state")
+        output_str.append("container state")
     if new_locked_state != None:
         searchedObj.switch_locked_state(new_locked_state)
-        str.append("locked state")
+        output_str.append("locked state")
     if new_key != '':
         searchedObj.edit_key_name(new_key)
-        str.append("key name")
+        output_str.append("key name")
     if new_storage != -2:
         searchedObj.set_storage(new_storage)
-        str.append("storage")
-    
+        output_str.append("storage")
+
     edited = ''
-    if len(str) == 0:
+    if not output_str:
         edited = ''
-    elif len(str) == 1:
-        edited = str[0]
-    elif len(str) == 2:
-        edited = str[0] + " and " + str[1]
+    elif len(output_str) == 1:
+        edited = output_str[0]
+    elif len(output_str) == 2:
+        edited = f"{output_str[0]} and {output_str[1]}"
     else:
-        edited = ", ".join(str[:-1]) + f", and {str[-1]}"
+        edited = ", ".join(output_str[:-1]) + f", and {output_str[-1]}"
 
     save()
     await interaction.followup.send(f"*Changed the object **{searchedObj.get_name()}**'s {edited}.*")
@@ -4017,4 +4065,4 @@ async def reviveplayer(interaction: discord.Interaction, player_name: str):
 #endregion
 #endregion
 
-client.run(os.getenv('token'))
+client.run(os.environ['token'])
