@@ -185,7 +185,7 @@ class HelpCMD(commands.Cog):
 
     @app_commands.command(name = "adminhelp", description = "Gives descriptions of every admin command.")
     @app_commands.default_permissions()
-    async def help(self, interaction: discord.Interaction):
+    async def adminhelp(self, interaction: discord.Interaction):
         emby = discord.Embed(description=adminhelp1)
         await interaction.response.send_message(embed=emby, view = AdminHelp(), ephemeral=True)
 
