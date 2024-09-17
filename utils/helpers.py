@@ -1,5 +1,6 @@
 import typing
 import discord
+
 from utils.data import Player, Room, playerdata, roomdata
 
 def simplify_string(string: str) -> str:

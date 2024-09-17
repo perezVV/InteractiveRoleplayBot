@@ -4,7 +4,6 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
-import utils.autocompletes as autocompletes
 import utils.helpers as helpers
 import utils.data as data
 
