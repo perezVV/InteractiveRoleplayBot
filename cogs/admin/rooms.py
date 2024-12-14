@@ -42,7 +42,8 @@ class AdminRoomCMDs(commands.Cog):
 
         data.roomdata[room_name] = data.Room(room_name, room_id, desc)
         channel = self.bot.get_channel(room_id)
-        await channel.edit(topic=desc)
+        if (desc != ''):
+            await channel.edit(topic=desc)
         data.save()
 
         await interaction.followup.send(
