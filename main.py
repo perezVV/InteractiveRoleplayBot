@@ -40,15 +40,15 @@ class Client(commands.Bot):
         super().__init__(intents=intents, command_prefix="/")
 
     async def setup_hook(self):
-        if not os.getenv("DONT_SYNC"):
-            self.tree.copy_global_to(guild=GUILD)
-            await self.tree.sync(guild=GUILD)
-
         self.remove_command("help")
 
         file_location = Path(__file__).parent.absolute().as_posix()
         for ext_name in get_all_extensions(file_location):
             await self.load_extension(ext_name)
+
+        if not os.getenv("DONT_SYNC"):
+            self.tree.copy_global_to(guild=GUILD)
+            await self.tree.sync(guild=GUILD)
 
 intents = discord.Intents.all()
 client = Client(intents=intents)

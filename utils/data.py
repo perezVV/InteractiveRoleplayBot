@@ -285,20 +285,20 @@ class Player:
         return
     
 def save():
-    with open('playerdata.pickle', 'wb') as playerdata_out:
+    with open('../playerdata.pickle', 'wb') as playerdata_out:
         pickle.dump(playerdata, playerdata_out)
 
-    with open('roomdata.pickle', 'wb') as roomdata_out:
+    with open('../roomdata.pickle', 'wb') as roomdata_out:
         pickle.dump(roomdata, roomdata_out)
 
 def data(file):
     try:
-        with open(file, 'rb') as f:
+        with open(f"../{file}", 'rb') as f:
             datafile = pickle.load(f)
     except FileNotFoundError:
         print(f'No {file} found; creating data file.')
         datafile = {}
-        with open(file, 'wb') as f:
+        with open(f"../{file}", 'wb') as f:
             pickle.dump(datafile, f)
     return datafile
 
