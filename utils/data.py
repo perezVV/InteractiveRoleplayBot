@@ -1,6 +1,6 @@
 import typing
 import pickle
-from pathlib import Path
+import os
 
 __all__ = ("Item", "Object", "Exit", "Room", "Player", "playerdata", "roomdata", "save", "get_max_carry_weight", "set_max_carry_weight", "get_max_wear_weight", "set_max_wear_weight")
 
@@ -284,8 +284,6 @@ class Player:
     def del_clothes(self, item: Item):
         self.playerClothes.remove(item)
         return
-    
-correct_base_path = Path(__file__).parent.parent.as_posix()
 
 class CustomUnpickle(pickle.Unpickler):
     def find_class(self, module, name):
@@ -295,20 +293,20 @@ class CustomUnpickle(pickle.Unpickler):
         return super().find_class(module, name)
     
 def save():
-    with open(f'{correct_base_path}/playerdata.pickle', 'wb') as playerdata_out:
+    with open(f'{os.environ["BASE_PATH"]}/playerdata.pickle', 'wb') as playerdata_out:
         pickle.dump(playerdata, playerdata_out)
 
-    with open(f'{correct_base_path}/roomdata.pickle', 'wb') as roomdata_out:
+    with open(f'{os.environ["BASE_PATH"]}/roomdata.pickle', 'wb') as roomdata_out:
         pickle.dump(roomdata, roomdata_out)
 
 def data(file):
     try:
-        with open(f"{correct_base_path}/{file}", 'rb') as f:
+        with open(f"{os.environ['BASE_PATH']}/{file}", 'rb') as f:
             datafile = CustomUnpickle(f).load()
     except FileNotFoundError:
         print(f'No {file} found; creating data file.')
         datafile = {}
-        with open(f"{correct_base_path}/{file}", 'wb') as f:
+        with open(f"{os.environ['BASE_PATH']}/{file}", 'wb') as f:
             pickle.dump(datafile, f)
     return datafile
 

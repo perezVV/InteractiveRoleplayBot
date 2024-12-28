@@ -5,6 +5,8 @@ from pathlib import Path
 import os
 
 
+os.environ["BASE_PATH"] = Path(__file__).parent.resolve().as_posix()
+
 def file_to_ext(str_path: str, base_path: str) -> str:
     # changes a file to an import-like string
     str_path = str_path.replace(base_path, "")
@@ -42,8 +44,7 @@ class Client(commands.Bot):
     async def setup_hook(self):
         self.remove_command("help")
 
-        file_location = Path(__file__).parent.absolute().as_posix()
-        for ext_name in get_all_extensions(file_location):
+        for ext_name in get_all_extensions(os.environ["BASE_PATH"]):
             await self.load_extension(ext_name)
 
         if not os.getenv("DONT_SYNC"):
