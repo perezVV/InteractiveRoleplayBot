@@ -106,7 +106,7 @@ class ETCCMDs(commands.Cog):
                 break  # player has entered the room, so let's stop here
 
         if not messages:
-            await interaction.followup.send("No messages found in the last 5 minutes.")
+            await interaction.followup.send("*No messages found in the last 5 minutes.*")
             return
 
         
@@ -121,9 +121,9 @@ class ETCCMDs(commands.Cog):
             link = await chat_exporter.link(reply)
             await reply.edit(view=ChatHistoryButton(link))
 
-            await interaction.followup.send("Chat history sent to your DMs.")
+            await interaction.followup.send("*Chat history sent to your DMs.*")
         except discord.Forbidden:
-            await interaction.followup.send("Could not send you the chat history. Please make sure your DMs are open.")
+            await interaction.followup.send("*Could not send you the chat history. Please make sure your DMs are open.*")
         
 
 async def setup(bot: commands.Bot):
