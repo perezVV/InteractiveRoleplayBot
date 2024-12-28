@@ -286,6 +286,13 @@ class Player:
         return
     
 correct_base_path = Path(__file__).parent.parent.as_posix()
+
+class CustomUnpickle(pickle.Unpickler):
+    def find_class(self, module, name):
+        # silly hack to allow unpickling of classes previously defined in the main module
+        if module == '__main__':
+            module = 'utils.data'
+        return super().find_class(module, name)
     
 def save():
     with open(f'{correct_base_path}/playerdata.pickle', 'wb') as playerdata_out:
@@ -297,7 +304,7 @@ def save():
 def data(file):
     try:
         with open(f"{correct_base_path}/{file}", 'rb') as f:
-            datafile = pickle.load(f)
+            datafile = CustomUnpickle(f).load()
     except FileNotFoundError:
         print(f'No {file} found; creating data file.')
         datafile = {}
