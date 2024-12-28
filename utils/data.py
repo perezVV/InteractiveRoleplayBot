@@ -1,5 +1,6 @@
 import typing
 import pickle
+from pathlib import Path
 
 __all__ = ("Item", "Object", "Exit", "Room", "Player", "playerdata", "roomdata", "save", "get_max_carry_weight", "set_max_carry_weight", "get_max_wear_weight", "set_max_wear_weight")
 
@@ -284,21 +285,23 @@ class Player:
         self.playerClothes.remove(item)
         return
     
+correct_base_path = Path(__file__).parent.parent.as_posix()
+    
 def save():
-    with open('../playerdata.pickle', 'wb') as playerdata_out:
+    with open(f'{correct_base_path}/playerdata.pickle', 'wb') as playerdata_out:
         pickle.dump(playerdata, playerdata_out)
 
-    with open('../roomdata.pickle', 'wb') as roomdata_out:
+    with open(f'{correct_base_path}/roomdata.pickle', 'wb') as roomdata_out:
         pickle.dump(roomdata, roomdata_out)
 
 def data(file):
     try:
-        with open(f"../{file}", 'rb') as f:
+        with open(f"{correct_base_path}/{file}", 'rb') as f:
             datafile = pickle.load(f)
     except FileNotFoundError:
         print(f'No {file} found; creating data file.')
         datafile = {}
-        with open(f"../{file}", 'wb') as f:
+        with open(f"{correct_base_path}/{file}", 'wb') as f:
             pickle.dump(datafile, f)
     return datafile
 
