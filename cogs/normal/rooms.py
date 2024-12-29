@@ -184,6 +184,11 @@ class RoomCMDs(commands.Cog):
         if currRoom is None:
             await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
             return
+        
+        room = helpers.get_room_from_name(exit_name)
+        if room is None:
+            await interaction.followup.send(f"*There is no exit to the room **{exit_name}** from **{currRoom.get_name()}**. Please use `/exits` to see a list of exits in the current room.*")
+            return
 
         exits = currRoom.get_exits()
 
@@ -220,9 +225,14 @@ class RoomCMDs(commands.Cog):
             return
 
         if helpers.simplify_string(searchedExit.get_key_name()) == helpers.simplify_string(searchedItem.get_name()):
+            channel = self.bot.get_channel(int(room.get_id()))
+            if channel is None:
+                await interaction.followup.send(f"*Could not find the channel for **{exit_name}**. The room may need to be fixed — please contact an admin.*")
+
             searchedExit.switch_locked_state(True)
             data.save()
             await interaction.followup.send(f"***{player.get_name()}** locked the exit to **{searchedExitName}** using **{searchedItem.get_name()}***.")
+            await channel.send(f"*The exit to **{currRoom.get_name()}** has been locked.*")
             return
 
         await interaction.followup.send(f"***{player.get_name()}** tried to lock the exit to **{searchedExitName}**, but **{searchedItem.get_name()}** was not the key.*")
@@ -249,6 +259,11 @@ class RoomCMDs(commands.Cog):
 
         if currRoom is None:
             await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
+            return
+        
+        room = helpers.get_room_from_name(exit_name)
+        if room is None:
+            await interaction.followup.send(f"*There is no exit to the room **{exit_name}** from **{currRoom.get_name()}**. Please use `/exits` to see a list of exits in the current room.*")
             return
 
         exits = currRoom.get_exits()
@@ -286,9 +301,14 @@ class RoomCMDs(commands.Cog):
             return
 
         if helpers.simplify_string(searchedExit.get_key_name()) == helpers.simplify_string(searchedItem.get_name()):
+            channel = self.bot.get_channel(int(room.get_id()))
+            if channel is None:
+                await interaction.followup.send(f"*Could not find the channel for **{exit_name}**. The room may need to be fixed — please contact an admin.*")
+
             searchedExit.switch_locked_state(False)
             data.save()
             await interaction.followup.send(f"***{player.get_name()}** unlocked the exit to **{searchedExitName}** using **{searchedItem.get_name()}***.")
+            await channel.send(f"*The exit to **{currRoom.get_name()}** has been unlocked.*")
             return
 
         await interaction.followup.send(f"***{player.get_name()}** tried to unlock the exit to **{searchedExitName}**, but **{searchedItem.get_name()}** was not the key.*")
