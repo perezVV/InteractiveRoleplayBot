@@ -53,6 +53,7 @@ help_page_six = ("**Player Commands (Page 6/6):**\n\n" +
     "`/unlockexit <exit_name> <key_name>`\n Unlocks an exit in your current room using the specified key from your inventory.\n" +
     "`/roll <max_num> [passing_roll]`\n Rolls for a number between 1 and whatever you would like. If a passing roll is specified, also states whether the roll succeeds.\n" +
     "`/time`\n Checks the current time in roleplay.\n"
+    "`/chathistory`\n Gets the chat history of the last 5 minutes for the current room.\n"
     )
 
 helpPages = [help_page_one, help_page_two, help_page_three, help_page_four, help_page_five, help_page_six]
