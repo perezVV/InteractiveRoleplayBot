@@ -29,12 +29,12 @@ class InventoryCMDs(commands.Cog):
         playerItems = player.get_items()
 
         if len(playerItems) == 0:
-            await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n`No items found.`")
+            await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n__`Weight`__: `0`/`{data.get_max_carry_weight()}`\n\n`No items found.`")
             return
 
-        itemNames = [f"`{item.get_name()}`" for item in playerItems]
-        allItems = ', '.join(itemNames)
-        await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n{allItems}")
+        itemNames = [f"`{item.get_name()}` (weight: `{item.get_weight()}`)" for item in playerItems]
+        allItems = '\n'.join(itemNames)
+        await interaction.followup.send(f"***{player.get_name()}** looked into their inventory:*\n\n__`Weight`__: `{player.get_weight()}`/`{data.get_max_carry_weight()}`\n\n{allItems}")
     #endregion
     #region /lookinv
     @app_commands.command(name = "lookinv", description = "Get the description of a specific item in your inventory.")
@@ -90,14 +90,14 @@ class InventoryCMDs(commands.Cog):
         playerClothes = player.get_clothes()
 
         if len(playerClothes) == 0:
-                await interaction.followup.send(f"***{player.get_name()}** looked at their clothes:*\n\n`No clothes found.`")
+                await interaction.followup.send(f"***{player.get_name()}** looked at their clothes:*\n\n__`Weight`__: `0`/`{data.get_max_wear_weight()}`\n\n`No clothes found.`")
                 return
 
         clothesNames: typing.List[str] = [
-            f"`{clothes.get_name()}`" for clothes in playerClothes
+            f"`{clothes.get_name()}` (weight: `{clothes.get_weight()}`)" for clothes in playerClothes
         ]
-        allClothes = ', '.join(clothesNames)
-        await interaction.followup.send(f"***{player.get_name()}** looked at their clothes:*\n\n{allClothes}")
+        allClothes = '\n'.join(clothesNames)
+        await interaction.followup.send(f"***{player.get_name()}** looked at their clothes:*\n\n__`Weight`__: `{player.get_clothes_weight()}`/`{data.get_max_wear_weight()}`\n\n{allClothes}")
     #endregion
     #region /lookclothes
     @app_commands.command(name = "lookclothes", description = "Get the description of a specific clothing item you are currently wearing.")
