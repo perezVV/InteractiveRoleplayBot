@@ -232,7 +232,7 @@ class RoomCMDs(commands.Cog):
             searchedExit.switch_locked_state(True)
             data.save()
             await interaction.followup.send(f"***{player.get_name()}** locked the exit to **{searchedExitName}** using **{searchedItem.get_name()}***.")
-            await channel.send(f"*The exit to **{currRoom.get_name()}** has been locked.*")
+            await channel.send(f"*The exit to **{currRoom.get_name()}** was locked.*")
             return
 
         await interaction.followup.send(f"***{player.get_name()}** tried to lock the exit to **{searchedExitName}**, but **{searchedItem.get_name()}** was not the key.*")
@@ -308,7 +308,7 @@ class RoomCMDs(commands.Cog):
             searchedExit.switch_locked_state(False)
             data.save()
             await interaction.followup.send(f"***{player.get_name()}** unlocked the exit to **{searchedExitName}** using **{searchedItem.get_name()}***.")
-            await channel.send(f"*The exit to **{currRoom.get_name()}** has been unlocked.*")
+            await channel.send(f"*The exit to **{currRoom.get_name()}** was unlocked.*")
             return
 
         await interaction.followup.send(f"***{player.get_name()}** tried to unlock the exit to **{searchedExitName}**, but **{searchedItem.get_name()}** was not the key.*")
