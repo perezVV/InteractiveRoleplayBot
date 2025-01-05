@@ -1,3 +1,4 @@
 discord.py<3
 python-dotenv
 chat-exporter
+tzdata

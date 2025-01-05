@@ -1,6 +1,8 @@
 import io
+import os
 import random
 import datetime
+import zoneinfo
 
 import chat_exporter
 from discord.ext import commands
@@ -61,7 +63,10 @@ class ETCCMDs(commands.Cog):
         player_id = interaction.user.id
         player = helpers.get_player_from_id(player_id)
 
-        t = datetime.datetime.now()
+        if os.environ.get("IANA_TIMEZONE") is not None:
+            t = datetime.datetime.now(zoneinfo.ZoneInfo(os.environ["IANA_TIMEZONE"]))
+        else:
+            t = datetime.datetime.now()
         current_time = t.strftime("%I:%M %p")
 
         if player is not None:
