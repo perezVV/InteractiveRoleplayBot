@@ -28,10 +28,9 @@ This bot is not currently available via one singular invite link; unfortunately,
   - Use the generated URL to invite the bot to your server.
 
 ## Installation
-This bot requires [Python 3.10](https://www.python.org/downloads/release/python-3100/). You'll need to install the dependencies by opening Command Prompt in the same folder as `run.bat` and using 
-`pip install -r requirements.txt`.
+Download and extract (or `git clone`) this project. Downloading can be done by clicking on the "Code" button, then on "Download ZIP."
 
-Create a text document in the same folder. Inside, paste the following:
+Create a text document in the project folder. Inside, paste the following:
 ```
 guild_id=your_server_id
 token=your_bot_token
@@ -41,7 +40,9 @@ Replace `your_bot_token` with the token you gained from the **Discord Developer 
 
 When saving the file, name it `.env` and select "All Files" as the file type rather than `.txt`. Do not include `.txt` at the end of the file name.
 
-Start the bot with `run.bat`.
+On Windows, you can simply double click on `run.bat`.
+
+On Mac and Linux, you can run `run.sh` instead. This may require marking the script as executable.
 
 ## Server set up
 By this point, you should have your own custom roleplay bot on your server. What you do from here is entirely your choice—still, we'd like to give you a few tips on getting started with creating new environments.
