@@ -40,7 +40,7 @@ Replace `your_bot_token` with the token you gained from the **Discord Developer 
 
 When saving the file, name it `.env` and select "All Files" as the file type rather than `.txt`. Do not include `.txt` at the end of the file name.
 
-On Windows, you can simply double click on `run.bat`.
+On Windows, you can simply double click on `run.bat` to start the bot.
 
 On Mac and Linux, you can run `run.sh` instead. This may require marking the script as executable.
 
