@@ -1,8 +1,9 @@
 import typing
 import pickle
+import configparser
 import os
 
-__all__ = ("Item", "Object", "Exit", "Room", "Player", "playerdata", "roomdata", "save", "get_max_carry_weight", "set_max_carry_weight", "get_max_wear_weight", "set_max_wear_weight")
+__all__ = ("Item", "Object", "Exit", "Room", "Player", "preferences", "playerdata", "roomdata", "save", "get_max_carry_weight", "set_max_carry_weight", "get_max_wear_weight", "set_max_wear_weight")
 
 class Item:
     def __init__(self, name: str, weight: float, wearable: bool, desc: str = ''):
@@ -310,25 +311,39 @@ def data(file):
             pickle.dump(datafile, f)
     return datafile
 
+def load_preferences():
+    config = configparser.ConfigParser()
+    pref_path = f"{os.environ['BASE_PATH']}/preferences.ini"
+    if not os.path.exists(pref_path):
+        print(f'No preferences.ini found; creating default preferences file.')
+        config['WEIGHT'] = {
+            'max_carry_weight': '10',
+            'max_wear_weight': '15'
+        }
+        with open(pref_path, 'w') as new_preferences:
+            config.write(new_preferences)
+    else:
+        config.read(pref_path)
+    return config
+
+def save_preferences():
+    with open(f"{os.environ['BASE_PATH']}/preferences.ini", 'w') as new_preferences:
+        preferences.write(new_preferences)
+
 playerdata: dict[str, Player] = data('playerdata.pickle')
 roomdata: dict[str, Room] = data('roomdata.pickle')
-
-#region Max weights
-max_carry_weight = 10
-max_wear_weight = 15
+preferences = load_preferences()
 
 def get_max_carry_weight():
-    return max_carry_weight
+    return int(preferences['WEIGHT']['max_carry_weight'])
 
 def set_max_carry_weight(new_max: int):
-    global max_carry_weight
-    max_carry_weight = new_max
-    return
+    preferences['WEIGHT']['max_carry_weight'] = str(new_max)
+    save_preferences()
 
 def get_max_wear_weight():
-    return max_wear_weight
+    return int(preferences['WEIGHT']['max_wear_weight'])
 
 def set_max_wear_weight(new_max: int):
-    global max_wear_weight
-    max_wear_weight = new_max
-    return
+    preferences['WEIGHT']['max_wear_weight'] = str(new_max)
+    save_preferences()

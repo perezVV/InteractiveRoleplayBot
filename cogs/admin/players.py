@@ -351,5 +351,35 @@ class AdminPlayerCMDs(commands.Cog):
         await interaction.followup.send(f"*Revived player **{player_name}**.*")
     #endregion
     
+    #region /editcarryweight
+    @app_commands.command(name = "editcarryweight", description = "Change the maximum carry weight for every player's inventory or clothes.")
+    @app_commands.choices(weight_to_change = [
+        app_commands.Choice(name = "Inventory", value = 0),
+        app_commands.Choice(name = "Clothing", value = 1),
+        ])
+    @app_commands.describe(new_weight = "The new maximum weight.")
+    @app_commands.default_permissions()
+    async def editcarryweight(self, interaction: discord.Interaction, weight_to_change: app_commands.Choice[int], new_weight: int):
+        await interaction.response.defer(thinking=True)
+
+        changedContainer = ''
+
+        if new_weight < 0:
+            await interaction.followup.send(
+                f"***{amount}** is an invalid input; please use a positive number.*"
+            )
+            return
+        
+        if weight_to_change.value == 0:
+            changedContainer = "inventory"
+            data.set_max_carry_weight(new_weight)
+
+        elif weight_to_change.value == 1:
+            changedContainer = "clothing"
+            data.set_max_wear_weight(new_weight)
+        
+        data.save()
+        await interaction.followup.send(f"*Changed the maximum player {changedContainer} weight to **{new_weight}**.*")
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(AdminPlayerCMDs(bot))
