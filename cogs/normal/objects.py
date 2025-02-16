@@ -418,7 +418,7 @@ class ObjectCMDs(commands.Cog):
         if amount in {0, 1}:
             for item in itemList:
                 if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    if (invWeight + item.get_weight()) > data.max_carry_weight:
+                    if (invWeight + item.get_weight()) > data.get_max_carry_weight():
                         await interaction.followup.send(f"***{player.get_name()}** tried to take the item **{item.get_name()}** from the object **{searchedObj.get_name()}**, but they could not fit it into their inventory.*")
                         return
                     player.add_item(item)

@@ -36,7 +36,7 @@ class AdminForceCMDs(commands.Cog):
         if amount in {0, 1}:
             for item in itemList:
                 if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    if (invWeight + item.get_weight()) > data.max_carry_weight:
+                    if (invWeight + item.get_weight()) > data.get_max_carry_weight():
                         await interaction.followup.send(f"***{player.get_name()}** tried to take the item **{item_name}**, but they could not fit it into their inventory.*")
                         return
                     player.add_item(item)
@@ -203,7 +203,7 @@ class AdminForceCMDs(commands.Cog):
         for item in itemList:
             if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
                 if item.get_wearable_state():
-                    if (clothesWeight + item.get_weight()) > data.max_wear_weight:
+                    if (clothesWeight + item.get_weight()) > data.get_max_wear_weight():
                         if len(player.get_clothes()) == 0:
                             await interaction.followup.send(f"***{player.get_name()}** tried to {midStr} the item **{item.get_name()}**, but it was too heavy.*")
                             return    
@@ -265,7 +265,7 @@ class AdminForceCMDs(commands.Cog):
         for item in itemList:
             if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
                 if item.get_wearable_state():
-                    if container.value == 1 and (player.get_weight() + item.get_weight()) > damax_carry_weight:
+                    if container.value == 1 and (player.get_weight() + item.get_weight()) > data.get_max_carry_weight():
                         await interaction.followup.send(f"***{player.get_name()}** tried to take off **{item.get_name()}**, but they could not fit into their inventory.*")
                         return
                     player.del_clothes(item)

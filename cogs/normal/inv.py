@@ -231,7 +231,7 @@ class InventoryCMDs(commands.Cog):
         for item in itemList:
             if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
                 if item.get_wearable_state():
-                    if (player.get_weight() + item.get_weight()) > data.max_carry_weight:
+                    if (player.get_weight() + item.get_weight()) > data.get_max_carry_weight():
                         await interaction.followup.send(f"***{player.get_name()}** tried to take off **{item.get_name()}**, but they could not fit into their inventory.*")
                         return
                     player.del_clothes(item)

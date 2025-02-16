@@ -144,8 +144,6 @@ class AdminObjectsCMDs(commands.Cog):
         )
         return
     #endregion
-
-
     #region /editobject
     @app_commands.command(name = "editobject", description = "Edit the value of an object.")
     @app_commands.describe(room_name = "The room of the object you wish to edit.")

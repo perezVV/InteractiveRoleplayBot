@@ -426,7 +426,7 @@ class RoomCMDs(commands.Cog):
         for item in itemList:
             if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
                 if item.get_wearable_state():
-                    if (clothesWeight + item.get_weight()) > data.max_wear_weight:
+                    if (clothesWeight + item.get_weight()) > data.get_max_wear_weight():
                         if len(player.get_clothes()) == 0:
                             await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but it was too heavy.*")
                             return    

@@ -54,7 +54,7 @@ class AdminItemsCMDs(commands.Cog):
             containerVar = helpers.get_player_from_name(container_name)
             currentWeight = containerVar.get_weight()
             checkCapacity = True
-            capacity = data.max_carry_weight
+            capacity = data.get_max_carry_weight()
 
         elif container.value == 2:
             ifNone = f"*Player **{container_name}** could not be found. Please use `/listplayers` to see all current players.*"
@@ -62,7 +62,7 @@ class AdminItemsCMDs(commands.Cog):
             containerVar = helpers.get_player_from_name(container_name)
             currentWeight = containerVar.get_clothes_weight()
             checkCapacity = True
-            capacity = data.max_wear_weight
+            capacity = data.get_max_wear_weight()
 
         elif container.value == 3:
 

@@ -5,6 +5,7 @@ import typing
 import utils.data as data
 import utils.helpers as helpers
 
+#region exits autocomplete
 async def exit_name_autocomplete(interaction: discord.Interaction, room_name: str) -> typing.List[app_commands.Choice[str]]:
     id = interaction.user.id
     channel_id = interaction.channel_id
