@@ -137,10 +137,10 @@ class InventoryCMDs(commands.Cog):
         await interaction.followup.send(f"***{player.get_name()}** looked at their clothing item **{searchedClothes.get_name()}**:*\n\n__`{searchedClothes.get_name()}`__\n\n__`Weight`__: `{searchedClothes.get_weight()}`\n\n{searchedClothes.get_desc()}")
     #endregion
     #region /wear
-    @app_commands.command(name = "wear", description = "Wear a clothing item from your inventory.", guild=GUILD)
+    @app_commands.command(name = "wear", description = "Wear a clothing item from your inventory.")
     @app_commands.describe(item_name = "The clothing item you wish to wear.")
     @app_commands.autocomplete(item_name=autocompletes.user_items_autocomplete)
-    async def wear(interaction: discord.Interaction, item_name: str):
+    async def wear(self, interaction: discord.Interaction, item_name: str):
         await interaction.response.defer(thinking=True)
         id = interaction.user.id
         player = helpers.get_player_from_id(id)

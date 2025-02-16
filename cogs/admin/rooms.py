@@ -136,21 +136,21 @@ class AdminRoomCMDs(commands.Cog):
     #endregion 
     #region /delexit
     @app_commands.command(name = "delexit", description = "Delete a connection between two rooms.")
-    @app_commands.describe(first_room_name = "The first of the two rooms you wish to add a connection between.")
-    @app_commands.describe(second_room_name = "The second of the two rooms you wish to add a connection between.")
+    @app_commands.describe(room_one_name = "The first of the two rooms you wish to add a connection between.")
+    @app_commands.describe(room_two_name = "The second of the two rooms you wish to add a connection between.")
     @app_commands.default_permissions()
-    async def delexit(self, interaction: discord.Interaction, first_room_name: str, second_room_name: str):
+    async def delexit(self, interaction: discord.Interaction, room_one_name: str, room_two_name: str):
         await interaction.response.defer(thinking=True)
 
-        simplified_room_one = helpers.simplify_string(first_room_name)
-        simplified_room_two = helpers.simplify_string(second_room_name)
+        simplified_room_one = helpers.simplify_string(room_one_name)
+        simplified_room_two = helpers.simplify_string(room_two_name)
         simplified_keys = {helpers.simplify_string(key): key for key in data.roomdata.keys()}
 
         if simplified_room_one not in simplified_keys:
-            await interaction.followup.send(f"*Room **{first_room_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
+            await interaction.followup.send(f"*Room **{room_one_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
             return
         if simplified_room_two not in simplified_keys:
-            await interaction.followup.send(f"*Room **{second_room_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
+            await interaction.followup.send(f"*Room **{room_two_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
             return
 
         room_one = helpers.get_room_from_name(simplified_room_one)
@@ -170,11 +170,14 @@ class AdminRoomCMDs(commands.Cog):
 
         exit = None
         for exit in exitsOne:
-            if exit.get_room1() == room_one.get_name():
-                if helpers.simplify_string(exit.get_room2()) == helpers.simplify_string(first_room_name):
+            if exit.get_room1() == room_two.get_name():
+                if helpers.simplify_string(exit.get_room2()) == helpers.simplify_string(room_one_name):
                     exit = exit
-            elif helpers.simplify_string(exit.get_room1()) == helpers.simplify_string(first_room_name):
-                exit = exit
+                    break
+            elif exit.get_room1() == room_one.get_name():
+                if helpers.simplify_string(exit.get_room2()) == helpers.simplify_string(room_two_name):
+                    exit = exit
+                    break
 
         room_one.del_exit(exit)
         room_two.del_exit(exit)
