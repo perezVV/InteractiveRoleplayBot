@@ -32,7 +32,7 @@ help_page_three = ("**Player Commands (Page 3/6):**\n\n" +
 help_page_four = ("**Player Commands (Page 4/6):**\n\n" +
     "*Inputs in angle brackets (`<>`) are required. Inputs in square brackets (`[]`) are optional.*\n\n" +
     "`/exits`\n Shows a list of all the exits in your current room.\n" +
-    "`/contents <object_name`\n Shows a list of all the items in an object in your current room.\n" +
+    "`/contents <object_name>`\n Shows a list of all the items in an object in your current room.\n" +
     "`/lookitem <item_name>`\n Shows details of a specific item in your current room.\n" +
     "`/lookinv <item_name>`\n Shows details of a specific item in your inventory.\n" +
     "`/lookclothes <item_name>`\n Shows details of a specific clothing item that you are currently wearing."
@@ -41,7 +41,7 @@ help_page_four = ("**Player Commands (Page 4/6):**\n\n" +
 help_page_five = ("**Player Commands (Page 5/6):**\n\n" +
     "*Inputs in angle brackets (`<>`) are required. Inputs in square brackets (`[]`) are optional.*\n\n" +
     "`/lookinside <object_name> <item_name>`\n Shows details of a specific item inside an object in your current room.\n" +
-    "`/lookobject <object_name`\n Shows details of a specific object in your current room.\n" +
+    "`/lookobject <object_name>`\n Shows details of a specific object in your current room.\n" +
     "`/lookplayer <player_name>`\n Shows details of a specific player in your current room.\n" + 
     "`/lockobject <object_name> <key_name>`\n Locks an object in your current room using the specified key from your inventory.\n" +
     "`/unlockobject <object_name> <key_name>`\n Unlocks an object in your current room using the specified key from your inventory."
