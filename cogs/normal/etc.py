@@ -75,7 +75,7 @@ class ETCCMDs(commands.Cog):
 
         await interaction.followup.send(f"`{current_time}`")
     #endregion
-
+    #region /chathistory
     @app_commands.command(name="chathistory", description="Get the chat history of the last 5 minutes for the current room.")
     async def chathistory(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
@@ -129,7 +129,7 @@ class ETCCMDs(commands.Cog):
             await interaction.followup.send("*Chat history sent to your DMs.*")
         except discord.Forbidden:
             await interaction.followup.send("*Could not send you the chat history. Please make sure your DMs are open.*")
-        
+        #endregion
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ETCCMDs(bot))

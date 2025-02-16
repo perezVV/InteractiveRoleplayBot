@@ -136,6 +136,45 @@ class InventoryCMDs(commands.Cog):
 
         await interaction.followup.send(f"***{player.get_name()}** looked at their clothing item **{searchedClothes.get_name()}**:*\n\n__`{searchedClothes.get_name()}`__\n\n__`Weight`__: `{searchedClothes.get_weight()}`\n\n{searchedClothes.get_desc()}")
     #endregion
+    #region /wear
+    @app_commands.command(name = "wear", description = "Wear a clothing item from your inventory.", guild=GUILD)
+    @app_commands.describe(item_name = "The clothing item you wish to wear.")
+    @app_commands.autocomplete(item_name=autocompletes.user_items_autocomplete)
+    async def wear(interaction: discord.Interaction, item_name: str):
+        await interaction.response.defer(thinking=True)
+        id = interaction.user.id
+        player = helpers.get_player_from_id(id)
+
+        if await helpers.check_paused(player, interaction):
+            return
+
+        if player == None or not player.get_name() in data.playerdata.keys():
+            await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.")
+            return
+
+        clothesWeight = player.get_clothes_weight()
+        itemList = player.get_items()
+        
+        for item in itemList:
+            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
+                if item.get_wearable_state():
+                    if (clothesWeight + item.get_weight()) > data.get_max_wear_weight():
+                        if len(player.get_clothes()) == 0:
+                            await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but it was too heavy.*")
+                            return    
+                        await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but they were wearing too much already.*")
+                        return
+                    player.add_clothes(item)
+                    player.del_item(item)
+                    data.save()
+                    await interaction.followup.send(f"***{player.get_name()}** wore the item **{item.get_name()}**.*")
+                    return
+                else:
+                    await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but it was not a piece of clothing.*")
+                    return
+
+        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
+    #endregion
     #region /drop
     @app_commands.command(name = "drop", description = "Drop an item from your inventory into the room.")
     @app_commands.describe(item_name = "The item you wish to drop.")

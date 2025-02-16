@@ -12,6 +12,7 @@ class RoomCMDs(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    #region /desc
     @app_commands.command(name = "desc", description = "Get the room's description.")
     async def desc(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
@@ -36,7 +37,7 @@ class RoomCMDs(commands.Cog):
             topic = f"`{room.get_name()} has no description.`"
 
         await interaction.followup.send(f"*{lookedAt}*:\n\n{topic}")
-
+#endregion
     #region /goto TODO: post-AA, set previous read room perms to be neutral rather than false
     @app_commands.command(name = "goto", description = "Move to the room that you specify.")
     @app_commands.describe(room_name = "The name of the room you wish the move to.")
