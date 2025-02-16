@@ -350,7 +350,6 @@ class AdminPlayerCMDs(commands.Cog):
         
         await interaction.followup.send(f"*Revived player **{player_name}**.*")
     #endregion
-    
     #region /editcarryweight
     @app_commands.command(name = "editcarryweight", description = "Change the maximum carry weight for every player's inventory or clothes.")
     @app_commands.choices(weight_to_change = [
@@ -380,6 +379,7 @@ class AdminPlayerCMDs(commands.Cog):
         
         data.save()
         await interaction.followup.send(f"*Changed the maximum player {changedContainer} weight to **{new_weight}**.*")
-
+    #endregion
 async def setup(bot: commands.Bot):
     await bot.add_cog(AdminPlayerCMDs(bot))
+    

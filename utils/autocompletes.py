@@ -205,3 +205,4 @@ async def object_contents_autocomplete(interaction: discord.Interaction, item_na
         for item in itemList
     ]
     return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+#endregion
