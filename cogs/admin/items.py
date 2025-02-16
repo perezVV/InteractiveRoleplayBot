@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
+import utils.autocompletes as autocompletes
 import utils.helpers as helpers
 import utils.data as data
 
@@ -133,6 +134,9 @@ class AdminItemsCMDs(commands.Cog):
     @app_commands.describe(item_name = "The name of the item you wish to delete.")
     @app_commands.describe(amount = "The amount of the item you wish to delete.")
     @app_commands.describe(object_room_name = "Optional; if the container is an object, specify the room name.")
+    @app_commands.autocomplete(container_name=autocompletes.admin_container_autocomplete)
+    @app_commands.autocomplete(object_room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(item_name=autocompletes.admin_item_autocomplete)
     @app_commands.default_permissions()
     async def delitem(self, interaction: discord.Interaction, container: app_commands.Choice[int], container_name: str, item_name: str, amount: int = 1, object_room_name: str = ''):
         await interaction.response.defer(thinking=True)
@@ -310,6 +314,9 @@ class AdminItemsCMDs(commands.Cog):
     @app_commands.describe(container_name = "The name of the container you wish to look inside of.")
     @app_commands.describe(item_name = "The name of the item you wish to look at.")
     @app_commands.describe(object_room_name = "Optional; if the container is an object, specify the room name.")
+    @app_commands.autocomplete(container_name=autocompletes.admin_container_autocomplete)
+    @app_commands.autocomplete(object_room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(item_name=autocompletes.admin_item_autocomplete)
     @app_commands.default_permissions()
     async def seeitem(self, interaction: discord.Interaction, container: app_commands.Choice[int], container_name: str, item_name: str, object_room_name: str = ''):
         await interaction.response.defer(thinking=True)
@@ -404,6 +411,9 @@ class AdminItemsCMDs(commands.Cog):
     @app_commands.describe(new_desc = "The new description of the item.")
     @app_commands.describe(is_wearable = "Whether you would like the item to be wearable.")
     @app_commands.describe(new_weight = "The new weight of the item.")
+    @app_commands.autocomplete(container_name=autocompletes.admin_container_autocomplete)
+    @app_commands.autocomplete(object_room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(item_name=autocompletes.admin_item_autocomplete)
     @app_commands.default_permissions()
     async def edititem(self, interaction: discord.Interaction, container: app_commands.Choice[int], container_name: str, item_name: str, object_room_name: str = '', new_name:str = '', new_desc: str = '', is_wearable: bool = None, new_weight: float = -1.0):
         await interaction.response.defer(thinking=True)

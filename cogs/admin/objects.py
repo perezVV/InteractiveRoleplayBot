@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
+import utils.autocompletes as autocompletes
 import utils.helpers as helpers
 import utils.data as data
 
@@ -40,6 +41,8 @@ class AdminObjectsCMDs(commands.Cog):
     @app_commands.command(name = "delobject", description = "Delete an object in a room.")
     @app_commands.describe(room_name = "The room you wish to add the object to.")
     @app_commands.describe(object_name = "The name of the object you wish to add to the room.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(object_name=autocompletes.admin_object_autocomplete)
     @app_commands.default_permissions()
     async def delobject(self, interaction: discord.Interaction, room_name: str, object_name: str):
         await interaction.response.defer(thinking=True)
@@ -96,6 +99,8 @@ class AdminObjectsCMDs(commands.Cog):
     @app_commands.command(name = "seeobject", description = "Get the description of a specific object from anywhere.")
     @app_commands.describe(room_name = "The room of the object you wish to look at.")
     @app_commands.describe(object_name = "The name of the object you wish to look at.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(object_name=autocompletes.admin_object_autocomplete)
     @app_commands.default_permissions()
     async def seeobject(self, interaction: discord.Interaction, room_name: str, object_name: str):
         await interaction.response.defer(thinking=True)
@@ -154,6 +159,8 @@ class AdminObjectsCMDs(commands.Cog):
     @app_commands.describe(new_locked_state = "Whether the object is locked or not.")
     @app_commands.describe(new_key = "The name of the key for the object.")
     @app_commands.describe(new_storage = "The new amount of items that can fit into the object. If infinite, input -1.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(object_name=autocompletes.admin_object_autocomplete)
     @app_commands.default_permissions()
     async def editobject(self, interaction: discord.Interaction, room_name: str, object_name: str, new_name: str = '', new_desc: str = '', new_container_state: bool = None, new_locked_state: bool = None, new_key: str = '', new_storage: int = -2):
         await interaction.response.defer(thinking=True)

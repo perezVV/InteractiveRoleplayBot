@@ -41,8 +41,10 @@ def get_room_from_name(name: str) -> typing.Optional[Room]:
 
 #endregion
 
+#region Check if player is paused
 async def check_paused(player: typing.Optional[Player], interaction: discord.Interaction) -> bool:
     if player is not None and player.is_paused():
         await interaction.followup.send(content="*Player commands are currently paused. Please wait until the admin unpauses your ability to use player commands.*", ephemeral=True)
         return True
     return False
+#endregion

@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
+import utils.autocompletes as autocompletes
 import utils.helpers as helpers
 import utils.data as data
 
@@ -16,6 +17,7 @@ class AdminForceCMDs(commands.Cog):
     @app_commands.describe(player_name = "The name of the player you wish to take an item.")
     @app_commands.describe(item_name = "The item you wish the player to take.")
     @app_commands.describe(amount = "The amount of that item you wish the player to take.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def forcetake(self, interaction: discord.Interaction, player_name: str, item_name: str, amount: int = 0):
         await interaction.response.defer(thinking=True)
@@ -96,6 +98,7 @@ class AdminForceCMDs(commands.Cog):
     @app_commands.describe(player_name = "The name of the player you wish to drop an item.")
     @app_commands.describe(item_name = "The item you wish for the player to drop.")
     @app_commands.describe(amount = "The amount of that item you wish for the player to drop.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def forcedrop(self, interaction: discord.Interaction, player_name: str, item_name: str, amount: int = 0):
         await interaction.response.defer(thinking=True)
@@ -169,6 +172,7 @@ class AdminForceCMDs(commands.Cog):
         app_commands.Choice(name = "From the player's inventory", value = 1)
         ])
     @app_commands.describe(item_name = "The clothing item you wish for the player to wear.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def forcewear(self, interaction: discord.Interaction, player_name: str, container: app_commands.Choice[int], item_name: str):
         await interaction.response.defer(thinking=True)
@@ -217,7 +221,7 @@ class AdminForceCMDs(commands.Cog):
                     await interaction.followup.send(f"***{player.get_name()}** tried to {midStr} the item **{item.get_name()}**, but it was not a piece of clothing.*")
                 return
             
-        await interaction.followup.send(f"Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a container.*")
+        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/listitems` to see a list of items in a container.*")
     #endregion
     #region /forceundress
     @app_commands.command(name = "forceundress", description = "Make a player take off a clothing item they are currently wearing.")
@@ -227,6 +231,7 @@ class AdminForceCMDs(commands.Cog):
         app_commands.Choice(name = "Drop into the player's inventory", value = 1)
         ])
     @app_commands.describe(item_name = "The clothing item you wish for a player to drop.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def forceundress(self, interaction: discord.Interaction, player_name: str, container: app_commands.Choice[int], item_name: str):
         await interaction.response.defer(thinking=True)

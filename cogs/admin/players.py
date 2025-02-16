@@ -2,6 +2,7 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
+import utils.autocompletes as autocompletes
 import utils.helpers as helpers
 import utils.data as data
 
@@ -51,6 +52,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /delplayer
     @app_commands.command(name = "delplayer", description = "Remove a player from the experience.")
     @app_commands.describe(player_name = "The player you wish to remove's name.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def delplayer(self, interaction: discord.Interaction, player_name: str):
         await interaction.response.defer(thinking=True)
@@ -95,6 +97,7 @@ class AdminPlayerCMDs(commands.Cog):
     @app_commands.describe(player_name = "The player you wish to edit.")
     @app_commands.describe(new_name = "The new name you wish to give the player.")
     @app_commands.describe(new_desc = "The new description you wish to give the player.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def editplayer(self, interaction: discord.Interaction, player_name: str, new_name: str = '', new_desc: str = ''):
         await interaction.response.defer(thinking=True)
@@ -142,6 +145,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /pauseplayer
     @app_commands.command(name = "pauseplayer", description = "Pause all player commands for a certain player.")
     @app_commands.describe(player_name = "The name of the player you wish to pause.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def pauseplayer(self, interaction: discord.Interaction, player_name: str):
         await interaction.response.defer(thinking=True)
@@ -163,6 +167,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /unpauseplayer
     @app_commands.command(name = "unpauseplayer", description = "Unpause all player commands for a certain player.")
     @app_commands.describe(player_name = "The name of the player you wish to unpause.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def unpauseplayer(self, interaction: discord.Interaction, player_name: str):
         await interaction.response.defer(thinking=True)
@@ -174,6 +179,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /findplayer 
     @app_commands.command(name = "findplayer", description = "Tells which room a player is currently in.")
     @app_commands.describe(player_name = "The name of the player you wish to find.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def findplayer(self, interaction: discord.Interaction, player_name: str):
         await interaction.response.defer(thinking=True)
@@ -200,6 +206,8 @@ class AdminPlayerCMDs(commands.Cog):
     @app_commands.command(name = "drag", description = "Drag a player into a room.")
     @app_commands.describe(player_name = "The name of the player that you wish to drag.")
     @app_commands.describe(room_name = "The name of the room you wish to drag the player into.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def drag(self, interaction: discord.Interaction, player_name: str, room_name: str):
         await interaction.response.defer(thinking=True)
@@ -303,6 +311,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /killplayer TODO: remove once /goto is fixed post-AA. currently a workaround
     @app_commands.command(name = "killplayer", description = "Gives a player the ability to see every room. Usually used when swapping from player to spectator.")
     @app_commands.describe(player_name = "The player you wish to add as a spectator.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def killplayer(self, interaction: discord.Interaction, player_name: str):
         await interaction.response.defer(thinking=True)
@@ -327,6 +336,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /reviveplayer TODO: remove once /goto is fixed post-AA. currently a workaround
     @app_commands.command(name = "reviveplayer", description = "Removes a player's ability to see every room. Usually used when swapping from spectator to player.")
     @app_commands.describe(player_name = "The player you wish to bring back to the experience.")
+    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
     @app_commands.default_permissions()
     async def reviveplayer(self, interaction: discord.Interaction, player_name: str):
         await interaction.response.defer(thinking=True)

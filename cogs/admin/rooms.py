@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
+import utils.autocompletes as autocompletes
 import utils.helpers as helpers
 import utils.data as data
 
@@ -53,6 +54,7 @@ class AdminRoomCMDs(commands.Cog):
     #region /delroom
     @app_commands.command(name = "delroom", description = "Remove a room from the experience.")
     @app_commands.describe(room_name = "The name of the room you wish to remove.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def delroom(self, interaction: discord.Interaction, room_name: str):
         await interaction.response.defer(thinking=True)
@@ -101,6 +103,8 @@ class AdminRoomCMDs(commands.Cog):
     @app_commands.describe(second_room_name = "The second of the two rooms you wish to add a connection between.")
     @app_commands.describe(is_locked = "True or false; whether or not you wish the exit to be locked.")
     @app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the exit.")
+    @app_commands.autocomplete(first_room_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(second_room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def addexit(self, interaction: discord.Interaction, first_room_name: str, second_room_name: str, is_locked: bool = False, key_name: str = ''):
         await interaction.response.defer(thinking=True)
@@ -138,6 +142,8 @@ class AdminRoomCMDs(commands.Cog):
     @app_commands.command(name = "delexit", description = "Delete a connection between two rooms.")
     @app_commands.describe(room_one_name = "The first of the two rooms you wish to add a connection between.")
     @app_commands.describe(room_two_name = "The second of the two rooms you wish to add a connection between.")
+    @app_commands.autocomplete(room_one_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(room_two_name=autocompletes.admin_exit_autocomplete)
     @app_commands.default_permissions()
     async def delexit(self, interaction: discord.Interaction, room_one_name: str, room_two_name: str):
         await interaction.response.defer(thinking=True)
@@ -239,6 +245,8 @@ class AdminRoomCMDs(commands.Cog):
     @app_commands.command(name = "seeexit", description = "Get the locked state of any exit.")
     @app_commands.describe(room_one_name = "The first room of the exit.")
     @app_commands.describe(room_two_name = "The second room of the exit.")
+    @app_commands.autocomplete(room_one_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(room_two_name=autocompletes.admin_exit_autocomplete)
     @app_commands.default_permissions()
     async def seeexit(self,interaction: discord.Interaction, room_one_name: str, room_two_name: str):
         await interaction.response.defer(thinking=True)
@@ -286,6 +294,7 @@ class AdminRoomCMDs(commands.Cog):
     @app_commands.describe(room_name = "The room you wish to edit.")
     @app_commands.describe(new_name = "The new name you wish to give the room.")
     @app_commands.describe(new_desc = "The new description you wish to give the room.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def editroom(self, interaction: discord.Interaction, room_name: str, new_name: str = '', new_desc: str = ''):
         await interaction.response.defer(thinking=True)
@@ -335,6 +344,8 @@ class AdminRoomCMDs(commands.Cog):
     @app_commands.describe(room_two_name = "The second room of the exit.")
     @app_commands.describe(new_locked_state = "The new locked state of the exit.")
     @app_commands.describe(new_key = "The new key for the exit.")
+    @app_commands.autocomplete(room_one_name=autocompletes.admin_rooms_autocomplete)
+    @app_commands.autocomplete(room_two_name=autocompletes.admin_exit_autocomplete)
     @app_commands.default_permissions()
     async def editexit(self, interaction: discord.Interaction, room_one_name: str, room_two_name: str, new_locked_state: bool = None, new_key: str = ''):
         await interaction.response.defer(thinking=True)
@@ -342,11 +353,11 @@ class AdminRoomCMDs(commands.Cog):
         room_two = helpers.get_room_from_name(room_two_name)
 
         if room_one is None:
-            await interaction.followup.send(f"*Could not find the room **{room_one_name}**. Please use `/listrooms` to see a list of all current rooms.")
+            await interaction.followup.send(f"*Could not find the room **{room_one_name}**. Please use `/listrooms` to see a list of all current rooms.*")
             return
 
         if room_two is None:
-            await interaction.followup.send(f"*Could not find the room **{room_two_name}**. Please use `/listrooms` to see a list of all current rooms.")
+            await interaction.followup.send(f"*Could not find the room **{room_two_name}**. Please use `/listrooms` to see a list of all current rooms.*")
             return
 
         exitsOne = room_one.get_exits()
