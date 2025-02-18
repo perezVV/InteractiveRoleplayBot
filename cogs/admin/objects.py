@@ -76,6 +76,7 @@ class AdminObjectsCMDs(commands.Cog):
     #region /listobjects
     @app_commands.command(name = "listobjects", description = "List all of the objects in a room.")
     @app_commands.describe(room_name = "The room that you wish to see the objects of.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def listobjects(self, interaction: discord.Interaction, room_name: str):
         await interaction.response.defer(thinking=True)

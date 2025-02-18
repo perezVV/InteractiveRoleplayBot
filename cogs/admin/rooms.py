@@ -195,6 +195,7 @@ class AdminRoomCMDs(commands.Cog):
     #region /findroom 
     @app_commands.command(name = "findroom", description = "Tells what channel is connected to a room.")
     @app_commands.describe(room_name = "The name of the room you wish to find.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def findroom(self, interaction: discord.Interaction, room_name: str):
         await interaction.response.defer(thinking=True)
@@ -212,6 +213,7 @@ class AdminRoomCMDs(commands.Cog):
     #region /listexits
     @app_commands.command(name = "listexits", description = "List all locations that are connected to a room.")
     @app_commands.describe(room_name = "The name of the room you wish to see the exits of.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def listexits(self, interaction: discord.Interaction, room_name: str):
         await interaction.response.defer(thinking=True)

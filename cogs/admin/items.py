@@ -230,6 +230,8 @@ class AdminItemsCMDs(commands.Cog):
         ])
     @app_commands.describe(container_name = "The name of the container you wish to add the item to.")
     @app_commands.describe(object_room_name = "Optional; if the container is an object, specify the room name.")
+    @app_commands.autocomplete(container_name=autocompletes.admin_container_autocomplete)
+    @app_commands.autocomplete(object_room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def listitems(self, interaction: discord.Interaction, container: app_commands.Choice[int], container_name: str, object_room_name: str = ''):
         await interaction.response.defer(thinking=True)

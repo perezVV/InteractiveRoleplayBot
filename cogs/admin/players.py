@@ -270,6 +270,7 @@ class AdminPlayerCMDs(commands.Cog):
     #region /dragall
     @app_commands.command(name = "dragall", description = "Drag all players into a room.")
     @app_commands.describe(room_name = "The name of the room you wish to drag the player into.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def dragall(self, interaction: discord.Interaction, room_name: str):
         await interaction.response.defer(thinking=True)
