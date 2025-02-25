@@ -28,6 +28,8 @@ class AdminItemsCMDs(commands.Cog):
     @app_commands.describe(desc = "The description of the item you wish to add.")
     @app_commands.describe(amount = "The amount of the item you wish to add.")
     @app_commands.describe(object_room_name = "Optional; if the container is an object, specify the room name.")
+    @app_commands.autocomplete(container_name=autocompletes.admin_container_autocomplete)
+    @app_commands.autocomplete(object_room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def additem(self, interaction: discord.Interaction, container: app_commands.Choice[int], container_name: str, item_name: str, weight: float, wearable: bool = False, desc: str = '', amount: int = 1, object_room_name: str = ''):
         await interaction.response.defer(thinking=True)
