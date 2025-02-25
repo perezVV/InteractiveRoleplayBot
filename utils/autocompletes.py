@@ -265,7 +265,7 @@ async def admin_exit_autocomplete(interaction: discord.Interaction, room_two_nam
     )
 
     choices: typing.List[app_commands.Choice[str]] = [
-        app_commands.Choice(name=name, value=name.split(" Locked")[0]) for name in sorted_exits[:25]
+        app_commands.Choice(name=name, value=name.split(" (Locked)")[0]) for name in sorted_exits[:25]
     ]
     
     return choices
