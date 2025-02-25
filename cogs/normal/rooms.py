@@ -58,6 +58,10 @@ class RoomCMDs(commands.Cog):
 
         room = helpers.get_room_from_name(room_name)
 
+        if room_name is None or room_name.startswith("\\"):
+            await interaction.followup.send(f"*You did not enter a valid room name. Please use `/exits` to see a list of exits in the current room.*")
+            return
+
         if room is None:
             await interaction.followup.send(f"*Could not find the exit **{room_name}**. Please use `/exits` to see a list of exits in the current room.*")
             return
@@ -174,6 +178,7 @@ class RoomCMDs(commands.Cog):
         player = helpers.get_player_from_id(player_id)
         channel_id = interaction.channel_id
         currRoom = helpers.get_room_from_id(channel_id)
+
 
         if await helpers.check_paused(player, interaction):
             return

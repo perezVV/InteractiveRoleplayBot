@@ -26,6 +26,10 @@ class AdminObjectsCMDs(commands.Cog):
     async def addobject(self, interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', storage: int = -1, desc: str = ''):
         await interaction.response.defer(thinking=True)
 
+        if object_name.startswith("\\"):
+            await interaction.followup.send(f"*You did not enter a valid object name. Please do not start a name with a backslash.*")
+            return
+
         room = helpers.get_room_from_name(room_name)
 
         if room is None:

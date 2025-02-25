@@ -21,6 +21,10 @@ class AdminRoomCMDs(commands.Cog):
     async def addroom(self, interaction: discord.Interaction, room_name: str, room_id: str, desc: str = ''):
         await interaction.response.defer(thinking=True)
 
+        if room_name.startswith("\\"):
+            await interaction.followup.send(f"*You did not enter a valid room name. Please do not start a name with a backslash.*")
+            return
+
         try:
             room_id = int(room_id)
         except ValueError:

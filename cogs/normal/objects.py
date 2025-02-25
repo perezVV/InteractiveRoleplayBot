@@ -426,7 +426,7 @@ class ObjectCMDs(commands.Cog):
                     data.save()
                     await interaction.followup.send(f"***{player.get_name()}** took the item **{item.get_name()}** from **{searchedObj.get_name()}***.")
                     return
-            await interaction.followup.send(f"*Could not find the item **{item_name}** insode of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of items in an object.*")
+            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/contents` to see a list of items in an object.*")
             return
 
         if amount < 0:
@@ -530,7 +530,7 @@ class ObjectCMDs(commands.Cog):
                     data.save()
                     await interaction.followup.send(f"***{player.get_name()}** dropped the item **{item.get_name()}** into **{searchedObj.get_name()}***.")
                     return
-            await interaction.followup.send(f"*Could not find the item **{item_name}** insode of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
+            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searchedObj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
             return
 
         if amount < 0:

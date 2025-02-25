@@ -41,6 +41,10 @@ class AdminItemsCMDs(commands.Cog):
         capacity = 0
         checkCapacity = False
 
+        if item_name.startswith("\\"):
+            await interaction.followup.send(f"*You did not enter a valid item name. Please do not start a name with a backslash.*")
+            return
+
         if amount < 1:
             await interaction.followup.send(
                 f"***{amount}** is an invalid input; please use a positive number greater than one.*"

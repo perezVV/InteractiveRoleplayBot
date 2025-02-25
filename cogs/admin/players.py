@@ -19,6 +19,10 @@ class AdminPlayerCMDs(commands.Cog):
     async def addplayer(self, interaction: discord.Interaction, player_name: str, player_id: str, desc: str = ''):
         await interaction.response.defer(thinking=True)
 
+        if player_name.startswith("\\"):
+            await interaction.followup.send(f"*You did not enter a valid player name. Please do not start a name with a backslash.*")
+            return
+
         if player_name in data.playerdata.keys():
             await interaction.followup.send(f"*Player **{player_name}** already exists. Please use a different name.*")
             return
