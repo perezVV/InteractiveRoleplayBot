@@ -1,4 +1,5 @@
 import typing
+import copy
 
 from discord.ext import commands
 from discord import app_commands
@@ -478,14 +479,23 @@ class AdminItemsCMDs(commands.Cog):
         else:
             itemList = containerVar.get_items()
 
-        searchedItem = None
-        for item in itemList:
-            if helpers.simplify_string(item.get_name()) == helpers.simplify_string(item_name):
-                searchedItem = item
+        matchingItems = [
+            i for i, item in enumerate(itemList)
+            if helpers.simplify_string(item.get_name()) == helpers.simplify_string(item_name)
+        ]
 
-        if searchedItem is None:
+        if not matchingItems:
             await interaction.followup.send(f"*Could not find the item **{item_name}** in {endMsg}.*")
             return
+
+        indexToEdit = matchingItems[-1]
+        searchedItem = itemList[indexToEdit]
+
+        duplicate_count = sum(1 for item in itemList if id(item) == id(searchedItem))
+        if duplicate_count > 1:
+            newItem = copy.deepcopy(searchedItem)
+            itemList[indexToEdit] = newItem
+            searchedItem = newItem
 
 
         item_strs: typing.List[str] = []
