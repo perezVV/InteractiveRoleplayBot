@@ -21,6 +21,7 @@ class AdminObjectsCMDs(commands.Cog):
     @app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the object.")
     @app_commands.describe(storage = "The max amount of items you wish to be able to store in the object. If left blank, there will be no maximum.")
     @app_commands.describe(desc = "The description of the object you wish to add to the room.")
+    @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
     async def addobject(self, interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', storage: int = -1, desc: str = ''):
         await interaction.response.defer(thinking=True)
