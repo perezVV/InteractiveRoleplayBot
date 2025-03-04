@@ -132,17 +132,31 @@ class AdminObjectsCMDs(commands.Cog):
             return
 
         is_locked = 'Locked' if searchedObj.get_locked_state() else 'Opened'
+        is_container = True if searchedObj.get_container_state() else False
 
         storage_amt = ''
         used_storage = ''
-        if searchedObj.get_storage() == -1:
-            storage_amt = '∞'
-        else:
-            storage_amt = str(searchedObj.get_storage())
+        if is_container:
+            if searchedObj.get_storage() == -1:
+                storage_amt = '∞'
+            else:
+                storage_amt = str(searchedObj.get_storage())
 
-        used_storage = f'{len(searchedObj.get_items())}/'
+            used_storage = f'{len(searchedObj.get_items())}/'
 
         keyName = str(searchedObj.get_key_name()) or "None"
+
+        if not is_container:
+            if searchedObj.get_desc() == '':
+                await interaction.followup.send(
+                f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n`Object has no description.`"
+                )
+                return
+            else:
+                await interaction.followup.send(
+                    f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n{searchedObj.get_desc()}"
+                )
+                return
 
         if searchedObj.get_desc() == '':
             await interaction.followup.send(

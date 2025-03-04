@@ -285,6 +285,7 @@ class Player:
     def del_clothes(self, item: Item):
         self.playerClothes.remove(item)
         return
+#endregion
 
 class CustomUnpickle(pickle.Unpickler):
     def find_class(self, module, name):
