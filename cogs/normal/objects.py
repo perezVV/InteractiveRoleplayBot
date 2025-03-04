@@ -198,6 +198,7 @@ class ObjectCMDs(commands.Cog):
             return
 
         is_locked = 'Locked' if searchedObj.get_locked_state() else 'Opened'
+        is_display = searchedObj.get_display_state() if hasattr(searchedObj, "isDisplay") else False
 
         storage_amt = ''
         used_storage = ''
@@ -212,11 +213,11 @@ class ObjectCMDs(commands.Cog):
             if searchedObj.get_container_state():
                 if searchedObj.get_desc() == '':
                     await interaction.followup.send(
-                        f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`"
+                        f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Display`__: `{is_display}`\n\n`Object has no description.`"
                     )
                     return
                 await interaction.followup.send(
-                    f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}"
+                    f"***{player.get_name()}** looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Display`__: `{is_display}`\n\n{searchedObj.get_desc()}"
                 )
                 return
             if searchedObj.get_desc() == '':
@@ -229,11 +230,11 @@ class ObjectCMDs(commands.Cog):
         if containerState == True:
             if searchedObj.get_desc() == '':
                 await interaction.followup.send(
-                    f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{storage_amt}`\n__`State`__: `{is_locked}`\n\n`Object has no description.`"
+                    f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{storage_amt}`\n__`State`__: `{is_locked}`\n__`Display`__: `{is_display}`\n\n`Object has no description.`"
                 )
                 return
             await interaction.followup.send(
-                f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{storage_amt}`\n__`State`__: `{is_locked}`\n\n{searchedObj.get_desc()}"
+                f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{storage_amt}`\n__`State`__: `{is_locked}`\n__`Display`__: `{is_display}`\n\n{searchedObj.get_desc()}"
             )
             return
 
@@ -270,6 +271,8 @@ class ObjectCMDs(commands.Cog):
             await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
             return
 
+        is_display = searchedObj.get_display_state() if hasattr(searchedObj, "isDisplay") else False
+
         if not searchedObj.get_container_state():
             if player is not None:
                 await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
@@ -277,12 +280,13 @@ class ObjectCMDs(commands.Cog):
             await interaction.followup.send(f"*Tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
             return
 
-        if searchedObj.get_locked_state():
+        if searchedObj.get_locked_state() and not is_display:
             if player is not None:
                 await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was locked.*")
                 return
             await interaction.followup.send(f"*Tried to look inside of the object **{searchedObj.get_name()}**, but it was locked.*")
             return
+            
 
         itemList = searchedObj.get_items()
         if len(itemList) == 0:
@@ -327,6 +331,8 @@ class ObjectCMDs(commands.Cog):
             await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
             return
 
+        is_display = searchedObj.get_display_state() if hasattr(searchedObj, "isDisplay") else False
+
         if not searchedObj.get_container_state():
             if player is not None:
                 await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
@@ -334,7 +340,7 @@ class ObjectCMDs(commands.Cog):
             await interaction.followup.send(f"*Tried to look inside of the object **{searchedObj.get_name()}**, but it was not a container.*")
             return
 
-        if searchedObj.get_locked_state():
+        if searchedObj.get_locked_state() and not is_display:
             if player is not None:
                 await interaction.followup.send(f"***{player.get_name()}** tried to look inside of the object **{searchedObj.get_name()}**, but it was locked.*")
                 return

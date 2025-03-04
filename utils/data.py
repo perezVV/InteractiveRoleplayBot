@@ -43,11 +43,12 @@ class Item:
 #endregion
 #region Object
 class Object:
-    def __init__(self, name: str, isContainer: bool, isLocked: bool, keyName: str = '', storage: int = -1, desc: str = ''):
+    def __init__(self, name: str, isContainer: bool, isLocked: bool, isDisplay: bool, keyName: str = '', storage: int = -1, desc: str = ''):
         self.name = name
         self.desc = desc
         self.isContainer = isContainer
         self.isLocked = isLocked
+        self.isDisplay = isDisplay
         self.keyName = keyName
         self.storage = storage
         self.objItems: typing.List[Item] = []
@@ -73,12 +74,23 @@ class Object:
     def get_storage(self):
         return self.storage
 
+    def set_display_state(self, display: bool):
+        self.isDisplay = display
+        return
+
+    def get_display_state(self):
+        return self.isDisplay
+
     def switch_locked_state(self, locked: bool):
         self.isLocked = locked
         return
 
     def switch_container_state(self, container: bool):
         self.isContainer = container
+        return
+
+    def set_items(self, items: typing.List[Item]):
+        self.objItems = items
         return
 
     def add_item(self, item: Item):

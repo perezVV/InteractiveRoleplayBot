@@ -187,13 +187,15 @@ async def object_contents_autocomplete(interaction: discord.Interaction, item_na
         if helpers.simplify_string(object.get_name()) == helpers.simplify_string(object_name):
             searchedObj = object
 
+    is_display = searchedObj.get_display_state() if hasattr(searchedObj, "isDisplay") else False
+
     if searchedObj is None:
         return []
 
     if not searchedObj.get_container_state():
         return []
 
-    if searchedObj.get_locked_state():
+    if searchedObj.get_locked_state() and not is_display:
         return []
 
     itemList = searchedObj.get_items()

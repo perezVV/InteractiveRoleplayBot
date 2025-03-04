@@ -1,4 +1,5 @@
 import typing
+import copy
 
 from discord.ext import commands
 from discord import app_commands
@@ -20,10 +21,11 @@ class AdminObjectsCMDs(commands.Cog):
     @app_commands.describe(is_locked = "True or false; whether or not you wish the object to be locked.")
     @app_commands.describe(key_name = "The name of the item you wish to be able lock and unlock the object.")
     @app_commands.describe(storage = "The max amount of items you wish to be able to store in the object. If left blank, there will be no maximum.")
+    @app_commands.describe(is_display = "True or false; whether or not you wish items in the object to be on display regardless of if it's locked.")
     @app_commands.describe(desc = "The description of the object you wish to add to the room.")
     @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.default_permissions()
-    async def addobject(self, interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', storage: int = -1, desc: str = ''):
+    async def addobject(self, interaction: discord.Interaction, room_name: str, object_name: str, is_container: bool, is_locked: bool = False, key_name: str = '', storage: int = -1, is_display: bool = False, desc: str = ''):
         await interaction.response.defer(thinking=True)
 
         if object_name.startswith("\\"):
@@ -36,7 +38,7 @@ class AdminObjectsCMDs(commands.Cog):
             await interaction.followup.send(f"*Room **{room_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
             return
         
-        object: data.Object = data.Object(object_name, is_container, is_locked, key_name, storage, desc)
+        object: data.Object = data.Object(object_name, is_container, is_locked, is_display, key_name, storage, desc)
         room.add_object(object)
 
         data.save()
@@ -133,6 +135,8 @@ class AdminObjectsCMDs(commands.Cog):
 
         is_locked = 'Locked' if searchedObj.get_locked_state() else 'Opened'
         is_container = True if searchedObj.get_container_state() else False
+        is_display = searchedObj.get_display_state() if hasattr(searchedObj, "isDisplay") else False
+
 
         storage_amt = ''
         used_storage = ''
@@ -160,12 +164,12 @@ class AdminObjectsCMDs(commands.Cog):
 
         if searchedObj.get_desc() == '':
             await interaction.followup.send(
-                f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n`Object has no description.`"
+                f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n__`Display`__: `{is_display}`\n\n`Object has no description.`"
             )
             return
 
         await interaction.followup.send(
-            f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n\n{searchedObj.get_desc()}"
+            f"*Looked at the object **{searchedObj.get_name()}**:*\n\n__`{searchedObj.get_name()}`__\n\n__`Storage`__: `{used_storage}{storage_amt}`\n__`State`__: `{is_locked}`\n__`Key Name`__: `{keyName}`\n__`Display`__: `{is_display}`\n\n{searchedObj.get_desc()}"
         )
         return
     #endregion
@@ -179,10 +183,11 @@ class AdminObjectsCMDs(commands.Cog):
     @app_commands.describe(new_locked_state = "Whether the object is locked or not.")
     @app_commands.describe(new_key = "The name of the key for the object.")
     @app_commands.describe(new_storage = "The new amount of items that can fit into the object. If infinite, input -1.")
+    @app_commands.describe(new_display_state = "Whether the object displays items regardless of if it's locked.")
     @app_commands.autocomplete(room_name=autocompletes.admin_rooms_autocomplete)
     @app_commands.autocomplete(object_name=autocompletes.admin_object_autocomplete)
     @app_commands.default_permissions()
-    async def editobject(self, interaction: discord.Interaction, room_name: str, object_name: str, new_name: str = '', new_desc: str = '', new_container_state: bool = None, new_locked_state: bool = None, new_key: str = '', new_storage: int = -2):
+    async def editobject(self, interaction: discord.Interaction, room_name: str, object_name: str, new_name: str = '', new_desc: str = '', new_container_state: bool = None, new_locked_state: bool = None, new_key: str = '', new_storage: int = -2, new_display_state: bool = None):
         await interaction.response.defer(thinking=True)
         currRoom = helpers.get_room_from_name(room_name)
 
@@ -218,11 +223,25 @@ class AdminObjectsCMDs(commands.Cog):
             and new_locked_state is None
             and not new_key
             and new_storage == -2
+            and new_display_state is False
         ):
             await interaction.followup.send(
                 "*Please select an option and enter a new value to edit an exit.*"
             )
             return
+
+        if not hasattr(searchedObj, "isDisplay"):
+            updatedObj = copy.deepcopy(searchedObj)
+            updatedObj.isDisplay = False
+            if not hasattr(updatedObj, "get_display_state"):
+                def get_display_state(self):
+                    return self.isDisplay
+                def set_display_state(self, display: bool):
+                    self.isDisplay = display
+                    return
+                updatedObj.get_display_state = get_display_state.__get__(updatedObj)
+                updatedObj.set_display_state = set_display_state.__get__(updatedObj)
+            searchedObj.__dict__.update(updatedObj.__dict__)
 
         output_str: typing.List[str] = []
         if new_name != '':
@@ -243,6 +262,9 @@ class AdminObjectsCMDs(commands.Cog):
         if new_storage != -2:
             searchedObj.set_storage(new_storage)
             output_str.append("storage")
+        if new_display_state != None:
+            searchedObj.set_display_state(new_display_state)
+            output_str.append("display state")
 
         edited = ''
         if not output_str:
