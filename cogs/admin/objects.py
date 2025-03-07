@@ -231,17 +231,16 @@ class AdminObjectsCMDs(commands.Cog):
             return
 
         if not hasattr(searchedObj, "isDisplay"):
-            updatedObj = copy.deepcopy(searchedObj)
-            updatedObj.isDisplay = False
-            if not hasattr(updatedObj, "get_display_state"):
+            searchedObj.isDisplay = False
+            if not hasattr(searchedObj, "get_display_state"):
                 def get_display_state(self):
                     return self.isDisplay
                 def set_display_state(self, display: bool):
                     self.isDisplay = display
                     return
-                updatedObj.get_display_state = get_display_state.__get__(updatedObj)
-                updatedObj.set_display_state = set_display_state.__get__(updatedObj)
-            searchedObj.__dict__.update(updatedObj.__dict__)
+                searchedObj.get_display_state = get_display_state.__get__(searchedObj)
+                searchedObj.set_display_state = set_display_state.__get__(searchedObj)
+            searchedObj.__dict__.update(searchedObj.__dict__)
 
         output_str: typing.List[str] = []
         if new_name != '':
