@@ -1,7 +1,7 @@
 import typing
 import discord
 
-from utils.data import Player, Room, playerdata, roomdata
+from utils.data import Player, Room, Item, playerdata, roomdata
 
 def simplify_string(string: str) -> str:
     return string.replace(' ', '').lower()
@@ -38,6 +38,34 @@ def get_room_from_name(name: str) -> typing.Optional[Room]:
         if simplify_string(room.get_name()) == simplify_string(name):
             return room
 #endregion
+
+#region Find items with shared name
+
+def find_items(name: str) -> typing.List[typing.Tuple[Item, str]]:
+    
+    searched_name = simplify_string(name)
+    foundItems = []
+    
+    for room in roomdata.values():
+        foundItems.extend(
+            (item, f"Room: `{room.get_name()}`") for item in room.get_items() if simplify_string(item.get_name()) == searched_name
+        )
+
+        for object in room.get_objects():
+            if object.get_container_state():
+                foundItems.extend(
+                    (item, f"Room `{room.get_name()}`'s object `{object.get_name()}`") for item in object.get_items() if simplify_string(item.get_name()) == searched_name
+                )
+                
+    for player in playerdata.values():
+        foundItems.extend(
+            (item, f"Player `{player.get_name()}`'s inventory") for item in player.get_items() if simplify_string(item.get_name()) == searched_name
+        )
+        foundItems.extend(
+            (item, f"Player `{player.get_name()}`'s clothing") for item in player.get_items() if simplify_string(item.get_name()) == searched_name
+        )
+    
+    return foundItems
 
 #endregion
 

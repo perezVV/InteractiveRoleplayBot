@@ -112,18 +112,18 @@ class AdminItemsCMDs(commands.Cog):
                     return
 
         amountStr = f"**{amount}** of the" if amount > 1 else 'the'
-        # self, name: str, weight: float, wearable: bool, desc: str = ''
-        item: data.Item = data.Item(item_name, weight, wearable, desc)
 
         if container.value == 2:
             if not item.get_wearable_state():
                 await interaction.followup.send(f"*Could not add **{item_name}** to **{containerVar.get_name()}**'s clothes: Item must be wearable.*")
                 return
             for _ in range(amount):
+                item: data.Item = data.Item(item_name, weight, wearable, desc)
                 containerVar.add_clothes(item)
 
         else:
             for _ in range(amount):
+                item: data.Item = data.Item(item_name, weight, wearable, desc)
                 containerVar.add_item(item)
 
         data.save()
@@ -494,15 +494,15 @@ class AdminItemsCMDs(commands.Cog):
             await interaction.followup.send(f"*Could not find the item **{item_name}** in {endMsg}.*")
             return
 
-        indexToEdit = matchingItems[-1]
-        searchedItem = itemList[indexToEdit]
+        found_items = helpers.find_items(item_name)
+        searchedItem = None
 
-        duplicate_count = sum(1 for item in itemList if id(item) == id(searchedItem))
-        if duplicate_count > 1:
-            newItem = copy.deepcopy(searchedItem)
-            itemList[indexToEdit] = newItem
-            searchedItem = newItem
-
+        if len(found_items) == 1:
+            searchedItem = itemList[matchingItems[0]]
+        else:
+            indexToEdit = matchingItems[-1]
+            itemList[indexToEdit] = copy.deepcopy(itemList[indexToEdit])
+            searchedItem = itemList[indexToEdit]
 
         item_strs: typing.List[str] = []
         if new_name != '':
@@ -544,6 +544,34 @@ class AdminItemsCMDs(commands.Cog):
         data.save()
         await interaction.followup.send(f"*Changed the item **{searchedItem.get_name()}**'s {edited}.*")
     #endregion
+    #region /finditems
+    @app_commands.command(name = "finditems", description = "List all items that have a given name, as well as their location.")
+    @app_commands.default_permissions()
+    async def finditems(self, interaction: discord.Interaction, item_name: str):
+        await interaction.response.defer(thinking=True)
+
+        found_items = helpers.find_items(item_name)
+
+        if not found_items:
+            await interaction.followup.send(f"*Could not find any items with the name **{item_name}**.*")
+            return
+        
+        
+        results = f"*Items with the name **{found_items[0][0].get_name()}** were found in the following location(s):*\n\n"
+        location_count = {}
+
+        for item, location in found_items:
+            location_count[location] = location_count.get(location, 0) + 1
+
+        for location, count in location_count.items():
+            if count > 1:
+                results += f"{location} **(x{count})**\n"
+            else:
+                results += f"{location}\n"
+
+        await interaction.followup.send(results)
+    #endregion
+        
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AdminItemsCMDs(bot))
