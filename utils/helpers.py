@@ -54,15 +54,17 @@ def find_items(name: str) -> typing.List[typing.Tuple[Item, str]]:
         for object in room.get_objects():
             if object.get_container_state():
                 foundItems.extend(
-                    (item, f"Room `{room.get_name()}`'s object `{object.get_name()}`") for item in object.get_items() if simplify_string(item.get_name()) == searched_name
+                    (item, f"Object: `{object.get_name()}` in the room `{room.get_name()}`") for item in object.get_items() if simplify_string(item.get_name()) == searched_name
                 )
                 
     for player in playerdata.values():
         foundItems.extend(
-            (item, f"Player `{player.get_name()}`'s inventory") for item in player.get_items() if simplify_string(item.get_name()) == searched_name
+            (item, f"Player inventory: `{player.get_name()}`") for item in player.get_items() if simplify_string(item.get_name()) == searched_name
         )
-        foundItems.extend(
-            (item, f"Player `{player.get_name()}`'s clothing") for item in player.get_items() if simplify_string(item.get_name()) == searched_name
+
+    for player in playerdata.values():
+                foundItems.extend(
+            (item, f"Player clothing: `{player.get_name()}`") for item in player.get_clothes() if simplify_string(item.get_name()) == searched_name
         )
     
     return foundItems

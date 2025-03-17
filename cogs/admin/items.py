@@ -544,10 +544,11 @@ class AdminItemsCMDs(commands.Cog):
         data.save()
         await interaction.followup.send(f"*Changed the item **{searchedItem.get_name()}**'s {edited}.*")
     #endregion
-    #region /finditems
-    @app_commands.command(name = "finditems", description = "List all items that have a given name, as well as their location.")
+    #region /finditem
+    @app_commands.command(name = "finditem", description = "List all items that have a given name, as well as their location.")
+    @app_commands.describe(item_name = "The name of the item you wish to find.")
     @app_commands.default_permissions()
-    async def finditems(self, interaction: discord.Interaction, item_name: str):
+    async def finditem(self, interaction: discord.Interaction, item_name: str):
         await interaction.response.defer(thinking=True)
 
         found_items = helpers.find_items(item_name)
