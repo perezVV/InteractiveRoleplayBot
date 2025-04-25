@@ -123,7 +123,7 @@ class ETCCMDs(commands.Cog):
 
         try:
             reply = await interaction.user.send(f"Here is the chat history for the last 5 minutes in {interaction.channel.mention}.", file=transcript_file)
-            link = await chat_exporter.link(reply)
+            link = f"{os.environ["CHATHISTORY_BASE_URL"]}{reply.attachments[0].url}"
             await reply.edit(view=ChatHistoryButton(link))
 
             await interaction.followup.send("*Chat history sent to your DMs.*")
