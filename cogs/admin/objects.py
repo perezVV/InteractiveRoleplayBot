@@ -38,6 +38,8 @@ class AdminObjectsCMDs(commands.Cog):
             await interaction.followup.send(f"*Room **{room_name}** could not be found. Please use `/listrooms` to see all current rooms.*")
             return
         
+        desc = helpers.format_desc(desc)
+
         object: data.Object = data.Object(object_name, is_container, is_locked, is_display, key_name, storage, desc)
         room.add_object(object)
 
@@ -247,6 +249,7 @@ class AdminObjectsCMDs(commands.Cog):
             searchedObj.edit_name(new_name)
             output_str.append("name")
         if new_desc != '':
+            new_desc = helpers.format_desc(new_desc)
             searchedObj.edit_desc(new_desc)
             output_str.append("description")
         if new_container_state != None:

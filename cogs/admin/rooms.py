@@ -45,6 +45,8 @@ class AdminRoomCMDs(commands.Cog):
                 )
                 return
 
+        desc = helpers.format_desc(desc)
+
         data.roomdata[room_name] = data.Room(room_name, room_id, desc)
         channel = self.bot.get_channel(room_id)
         if (desc != ''):
@@ -327,6 +329,7 @@ class AdminRoomCMDs(commands.Cog):
             del data.roomdata[old_name]
             edited += f" name to **{new_name}**"
         if new_desc != '':
+            new_desc = helpers.format_desc(new_desc)
             room.edit_desc(new_desc)
             channel = self.bot.get_channel(int(room_id))
             await channel.edit(topic=new_desc)

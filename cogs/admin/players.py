@@ -47,6 +47,8 @@ class AdminPlayerCMDs(commands.Cog):
             )
             return
 
+        desc = helpers.format_desc(desc)
+
         data.playerdata[player_name] = data.Player(player_name, player_id, desc)
         data.save()
         await interaction.followup.send(
@@ -121,6 +123,7 @@ class AdminPlayerCMDs(commands.Cog):
             del data.playerdata[old_name]
             edited += f" name to **{new_name}**"
         if new_desc != '':
+            new_desc = helpers.format_desc(new_desc)
             player.edit_desc(new_desc)
             if edited == '':
                 edited = f'{edited} description'
