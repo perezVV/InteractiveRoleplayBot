@@ -40,6 +40,7 @@ class AdminItemsCMDs(commands.Cog):
         currentWeight = 0
         capacity = 0
         checkCapacity = False
+        desc = helpers.format_desc(desc)
 
         if item_name.startswith("\\"):
             await interaction.followup.send(f"*You did not enter a valid item name. Please do not start a name with a backslash.*")
@@ -510,6 +511,7 @@ class AdminItemsCMDs(commands.Cog):
             nameStr = 'name'
             item_strs.append(nameStr)
         if new_desc != '':
+            new_desc = helpers.format_desc(new_desc)
             searchedItem.edit_desc(new_desc)
             descStr = 'description'
             item_strs.append(descStr)
