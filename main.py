@@ -37,6 +37,9 @@ def get_all_extensions(str_path: str, folder: str = "cogs") -> list[str]:
 load_dotenv()
 GUILD = discord.Object(id=int(os.environ['guild_id']))
 
+if not os.environ.get("CHATHISTORY_BASE_URL"):
+    os.environ["CHATHISTORY_BASE_URL"] = "https://basic-discord-html-viewer.onrender.com/display?url="
+
 class Client(commands.Bot):
     def __init__(self, *, intents:discord.Intents):
         super().__init__(intents=intents, command_prefix="/")
