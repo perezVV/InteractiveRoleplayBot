@@ -45,7 +45,8 @@ class AdminRoomCMDs(commands.Cog):
                 )
                 return
 
-        desc = helpers.format_desc(desc)
+        if desc != '':
+            desc = helpers.format_desc(desc)
 
         data.roomdata[room_name] = data.Room(room_name, room_id, desc)
         channel = self.bot.get_channel(room_id)

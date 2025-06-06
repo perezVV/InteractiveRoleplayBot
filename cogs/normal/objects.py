@@ -512,7 +512,7 @@ class ObjectCMDs(commands.Cog):
             return
 
         if not searchedObj.get_container_state():
-            await interaction.followup.send(f"***{player.get_name()}** tried to drop an item from the object **{searchedObj.get_name()}**, but it was locked.*")
+            await interaction.followup.send(f"***{player.get_name()}** tried to drop an item inside of the object **{searchedObj.get_name()}**, but it was locked.*")
             return
 
         if searchedObj.get_locked_state():

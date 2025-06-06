@@ -115,7 +115,7 @@ class AdminItemsCMDs(commands.Cog):
         amountStr = f"**{amount}** of the" if amount > 1 else 'the'
 
         if container.value == 2:
-            if not item.get_wearable_state():
+            if not wearable:
                 await interaction.followup.send(f"*Could not add **{item_name}** to **{containerVar.get_name()}**'s clothes: Item must be wearable.*")
                 return
             for _ in range(amount):
@@ -218,13 +218,23 @@ class AdminItemsCMDs(commands.Cog):
             await interaction.followup.send(f"*Could not find the item **{item_name}**.*")
             return
 
+        realAmount = 0
         for _ in range(amount):
             if container.value == 2:
-                containerVar.del_clothes(searchedItem)
+                for clothing in containerVar.get_clothes():
+                    if clothing.name == searchedItem.name:
+                        realAmount += 1
+                        containerVar.del_clothes(clothing)
+                        break
             else:
-                containerVar.del_item(searchedItem)
+                for item in containerVar.get_items():
+                    if item.name == searchedItem.name:
+                        realAmount += 1
+                        containerVar.del_item(item)
+                        break
 
-        amountStr = f'**{amount}** of the' if amount > 1 else 'the'
+
+        amountStr = f'**{realAmount}** of the' if amount > 1 else 'the'
         data.save()
         await interaction.followup.send(f"*Deleted {amountStr} item **{searchedItem.get_name()}** from the {containerType} **{containerVar.get_name()}**.*")
     #endregion
@@ -245,6 +255,8 @@ class AdminItemsCMDs(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         endMsg = ''
+        weightMsg = ''
+    
         containerVar = None
         if container.value == 0:
             containerVar = helpers.get_room_from_name(container_name)
@@ -263,6 +275,7 @@ class AdminItemsCMDs(commands.Cog):
                 return
 
             endMsg = f"**{containerVar.get_name()}**'s inventory"
+            weightMsg = f"__`Weight`__: `{containerVar.get_weight()}`/`{data.get_max_carry_weight()}`\n\n"
 
 
         elif container.value == 2:
@@ -273,6 +286,7 @@ class AdminItemsCMDs(commands.Cog):
                 return
 
             endMsg = f"**{containerVar.get_name()}**'s clothes"        
+            weightMsg = f"__`Weight`__: `{containerVar.get_clothes_weight()}`/`{data.get_max_carry_weight()}`\n\n"
 
 
         elif container.value == 3:
@@ -308,10 +322,14 @@ class AdminItemsCMDs(commands.Cog):
             await interaction.followup.send(f"*Looked inside of {endMsg}:*\n\n`No items found.`")
             return
 
-        itemNames = [f"`{item.get_name()}`" for item in itemList]
-        allItems = ', '.join(itemNames)
+        if container.value == 1 or container.value == 2:
+            itemNames = [f"`{item.get_name()}` (weight: `{item.get_weight()}`)" for item in itemList]
+            allItems = '\n'.join(itemNames)
+        else:
+            itemNames = [f"`{item.get_name()}`" for item in itemList]
+            allItems = ', '.join(itemNames)
 
-        await interaction.followup.send(f"*Looked inside of {endMsg}:*\n\n{allItems}")
+        await interaction.followup.send(f"*Looked inside of {endMsg}:*\n\n{weightMsg}{allItems}")
     #endregion
     #region /seeitem
     @app_commands.command(name = "seeitem", description = "Get the description of a specific item.")
