@@ -18,7 +18,6 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "[OPTIONAL] The amount you wish to take.")
     @app_commands.autocomplete(item_name=autocompletes.room_items_autocomplete)
     async def takeitem(self, interaction: discord.Interaction, item_name: str, amount: int = 0):
-        await interaction.response.defer(thinking=True)
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
@@ -28,6 +27,10 @@ class ItemCMDs(commands.Cog):
             return
         if await helpers.check_room_exists(interaction, room):
             return
+        if await helpers.handle_view_more(interaction, "item", item_name):
+            return
+
+        await interaction.response.defer(thinking=True)
 
         inv_weight = player.get_weight()
         item_list = room.get_items()

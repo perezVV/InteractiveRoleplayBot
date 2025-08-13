@@ -1,10 +1,16 @@
 import typing
 import discord
+import asyncio
 
+from discord import app_commands
+from collections import defaultdict
 from utils.data import Player, Room, Item, Object, playerdata, roomdata
 
-
-
+# maximum number of choices discord allows in an autocomplete list
+MAX_CHOICES = 25
+# autocomplete helper for viewing more items
+hidden_items_cache = defaultdict(list)
+hidden_items_lock = asyncio.Lock()
 
 #region Get Player methods
 
@@ -84,6 +90,42 @@ def format_desc(desc: str) -> str:
     for line in lines:
         formattedDesc += (line + '\n')
     return formattedDesc
+#endregion
+#region Autocomplete limit workaround
+async def choice_limit(interaction: discord.Interaction, element_type: str, choices: list[app_commands.Choice[str]]) -> list[app_commands.Choice[str]]:
+    if len(choices) <= MAX_CHOICES:
+        return choices
+    
+    visible = choices[:MAX_CHOICES - 1]
+    hidden = choices[MAX_CHOICES - 1:]
+
+    more_label = f"[View {len(hidden)} more {element_type}s...]"
+    visible.append(app_commands.Choice(name=more_label, value="__SHOW_MORE__"))
+
+    async with hidden_items_lock:
+        hidden_items_cache[(interaction.user.id, interaction.channel_id)] = hidden
+
+    return visible
+#endregion
+#region Handle "view more" choice
+async def handle_view_more(interaction: discord.Interaction, element_type: str, value: str) -> bool:
+    if value != "__SHOW_MORE__":
+        return False
+    
+    async with hidden_items_lock:
+        hidden = hidden_items_cache.get((interaction.user.id, interaction.channel_id), [])
+    
+    if not hidden:
+        await interaction.response.send_message("*No more {element_type}s to show.*", ephemeral=True)
+        return True
+    
+    hidden_names = "\n- ".join(f"`{choice.name}`" for choice in hidden)
+    await interaction.response.send_message(f"*Remaining {element_type}s:*\n\n- {hidden_names}", ephemeral=True)
+
+    async with hidden_items_lock:
+        hidden_items_cache.pop((interaction.user.id, interaction.channel_id), None)
+    
+    return True
 #endregion
 
 #endregion

@@ -40,10 +40,10 @@ async def exit_name_autocomplete(interaction: discord.Interaction, room_name: st
 
         choices.append(app_commands.Choice(name = currExit + locked_state, value = currExit))
 
-    if not room_name:
-        return choices
+    if room_name:
+        choices = [choice for choice in choices if room_name.lower() in choice.name.lower()]
 
-    return [choice for choice in choices if room_name.lower() in choice.name.lower()][:25]
+    return await helpers.choice_limit(interaction, "exit", choices)
 #endregion
 
 #region room items autocomplete
@@ -53,22 +53,21 @@ async def room_items_autocomplete(interaction: discord.Interaction, item_name: s
     player = helpers.get_player_from_id(player_id)
     currRoom = helpers.get_room_from_id(channel_id)
 
-    if await helpers.check_paused(player, interaction):
+    if await helpers.check_valid_player(interaction, player):
         return []
 
     if currRoom is None:
         return []
 
-    itemList = currRoom.get_items()
-
     choices: typing.List[app_commands.Choice[str]] = [
         app_commands.Choice(name=item.get_name(), value=item.get_name())
-        for item in itemList
+        for item in currRoom.get_items()
     ]
-    if not item_name:
-        return choices
 
-    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+    if item_name:
+        choices = [choice for choice in choices if item_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "item", choices)
 #endregion
 
 #region players autocomplete
@@ -91,10 +90,10 @@ async def players_autocomplete(interaction: discord.Interaction, player_name: st
         app_commands.Choice(name=thisPlayer.get_name(), value=thisPlayer.get_name())
         for thisPlayer in playerList
     ]
-    if not player_name:
-        return choices
+    if player_name:
+        choices = [choice for choice in choices if player_name.lower() in choice.name.lower()]
     
-    return[choice for choice in choices if player_name.lower() in choice.name.lower()][:25]
+    return await helpers.choice_limit(interaction, "player", choices)
 #endregion
 
 #region user items autocomplete
@@ -114,7 +113,11 @@ async def user_items_autocomplete(interaction: discord.Interaction, item_name: s
         app_commands.Choice(name=item.get_name(), value=item.get_name())
         for item in player_items
     ]
-    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+
+    if item_name:
+        choices = [choice for choice in choices if item_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "item", choices)
 #endregion
 
 #region user or room items autocomplete
@@ -150,7 +153,10 @@ async def clothing_autocomplete(interaction: discord.Interaction, item_name: str
         app_commands.Choice(name=clothes.get_name(), value=clothes.get_name())
         for clothes in playerClothes
     ]
-    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+    if item_name:
+        choices = [choice for choice in choices if item_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "item", choices)
 #endregion
 
 #region object autocomplete
@@ -172,7 +178,10 @@ async def object_autocomplete(interaction: discord.Interaction, object_name: str
         app_commands.Choice(name=obj.get_name(), value=obj.get_name())
         for obj in objList
     ]
-    return [choice for choice in choices if object_name.lower() in choice.name.lower()][:25]
+    if object_name:
+        choices = [choice for choice in choices if object_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "object", choices)
 #endregion
 
 #region object contents autocomplete
@@ -216,7 +225,10 @@ async def object_contents_autocomplete(interaction: discord.Interaction, item_na
         app_commands.Choice(name=item.get_name(), value=item.get_name())
         for item in itemList
     ]
-    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+    if item_name:
+        choices = [choice for choice in choices if item_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "item", choices)
 #endregion
 
 #region admin players autocomplete
@@ -225,26 +237,22 @@ async def admin_players_autocomplete(interaction: discord.Interaction, player_na
         app_commands.Choice(name=player.get_name(), value=player.get_name())
         for player in data.playerdata.values()
     ]
-    if not player_name:
-        return choices
-    
-    return[choice for choice in choices if player_name.lower() in choice.name.lower()][:25]
+    if player_name:
+        choices = [choice for choice in choices if player_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "player", choices)
 #endregion
 
 #region admin rooms autocomplete
 async def admin_rooms_autocomplete(interaction: discord.Interaction, room_name: str) -> typing.List[app_commands.Choice[str]]:
-    room_names = [room.get_name() for room in data.roomdata.values()]
-
-    sorted_rooms = sorted(
-        (name for name in room_names if room_name.lower() in name.lower()),
-        key=lambda name: (name.lower() != room_name.lower(), not name.lower().startswith(room_name.lower()))
-    )
-
     choices: typing.List[app_commands.Choice[str]] = [
-        app_commands.Choice(name=name, value=name) for name in sorted_rooms[:25]
-    ][:25]
-    
-    return choices
+        app_commands.Choice(name=room.get_name(), value=room.get_name())
+        for room in data.roomdata.values()
+    ]
+    if room_name:
+        choices = [choice for choice in choices if room_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "room", choices)
 #endregion
 
 #region admin exit autocomplete
@@ -277,10 +285,13 @@ async def admin_exit_autocomplete(interaction: discord.Interaction, room_two_nam
     )
 
     choices: typing.List[app_commands.Choice[str]] = [
-        app_commands.Choice(name=name, value=name.split(" (Locked)")[0]) for name in sorted_exits[:25]
+        app_commands.Choice(name=name, value=name.split(" (Locked)")[0]) for name in sorted_exits
     ]
+
+    if room_two_name:
+        choices = [choice for choice in choices if room_two_name.lower() in choice.name.lower()]
     
-    return choices
+    return await helpers.choice_limit(interaction, "exits", choices)
 #endregion
 
 #region admin object autocomplete
@@ -300,7 +311,10 @@ async def admin_object_autocomplete(interaction: discord.Interaction, object_nam
         app_commands.Choice(name=obj.get_name(), value=obj.get_name())
         for obj in objList
     ]
-    return [choice for choice in choices if object_name.lower() in choice.name.lower()][:25]
+    if object_name:
+        choices = [choice for choice in choices if object_name.lower() in choice.name.lower()]
+
+    return await helpers.choice_limit(interaction, "object", choices)
 
 #endregion
 
@@ -346,10 +360,12 @@ async def admin_item_autocomplete(interaction:discord.Interaction, item_name: st
     )
 
     choices: typing.List[app_commands.Choice[str]] = [
-        app_commands.Choice(name=name, value=name) for name in sorted_items[:25]
+        app_commands.Choice(name=name, value=name) for name in sorted_items
     ]
+    if item_name:
+            choices = [choice for choice in choices if item_name.lower() in choice.name.lower()]
 
-    return choices
+    return await helpers.choice_limit(interaction, "item", choices)
 #endregion
 
 #region admin item container autocomplete
@@ -398,9 +414,9 @@ async def admin_force_item_autocomplete(interaction:discord.Interaction, item_na
         app_commands.Choice(name=item.get_name(), value=item.get_name())
         for item in itemNames
     ]
-    if not item_name:
-        return choices
+    if item_name:
+        choices = [choice for choice in choices if item_name.lower() in choice.name.lower()]
 
-    return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+    return await helpers.choice_limit(interaction, "item", choices)
 
 #endregion
