@@ -102,22 +102,32 @@ async def user_items_autocomplete(interaction: discord.Interaction, item_name: s
     id = interaction.user.id
     player = helpers.get_player_from_id(id)
 
-    if await helpers.check_paused(player, interaction):
-        return []
+    if await helpers.check_valid_player(interaction, player):
+        return
+    
+    player_items = player.get_items()
 
-    if player is None or player.get_name() not in data.playerdata.keys():
-        return []
-
-    playerItems = player.get_items()
-
-    if len(playerItems) == 0:
+    if len(player_items) == 0:
         return []
 
     choices: typing.List[app_commands.Choice[str]] = [
         app_commands.Choice(name=item.get_name(), value=item.get_name())
-        for item in playerItems
+        for item in player_items
     ]
     return [choice for choice in choices if item_name.lower() in choice.name.lower()][:25]
+#endregion
+
+#region user or room items autocomplete
+async def user_or_room_items_autocomplete(interaction: discord.Interaction, item_name: str) -> typing.List[app_commands.Choice[str]]:
+    container_type = interaction.namespace.container
+    
+    if container_type == 0:
+        return await user_items_autocomplete(interaction, item_name)
+    
+    if container_type == 1:
+        return await room_items_autocomplete(interaction, item_name)
+
+    return []
 #endregion
 
 #region clothing autocomplete

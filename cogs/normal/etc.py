@@ -9,6 +9,7 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 
+import utils.autocompletes as autocompletes
 import utils.data as data
 import utils.helpers as helpers
 
@@ -24,6 +25,125 @@ class ETCCMDs(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    #region /move TODO: check for exits (once they have names!), not adjacent rooms
+    @app_commands.command(name = "move", description = "Move to the room that you specify.")
+    @app_commands.describe(exit_name = "The name of the exit you would like to move through.")
+    @app_commands.autocomplete(exit_name=autocompletes.exit_name_autocomplete)
+    async def move(self, interaction: discord.Interaction, exit_name: str):
+        await interaction.response.defer(thinking=True)
+        id = interaction.user.id
+        channel_id = interaction.channel_id
+        player = helpers.get_player_from_id(id)
+        currRoom = None
+
+        if await helpers.check_paused(player, interaction):
+            return
+
+        if player is None or player.get_name() not in data.playerdata.keys():
+            await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
+            return
+
+        room = helpers.get_room_from_name(exit_name)
+
+        if exit_name is None or exit_name.startswith("\\"):
+            await interaction.followup.send(f"*You did not enter a valid room name. Please use `/exits` to see a list of exits in the current room.*")
+            return
+
+        if room is None:
+            await interaction.followup.send(f"*Could not find the exit **{exit_name}**. Please use `/exits` to see a list of exits in the current room.*")
+            return
+
+        for newRoom in data.roomdata.values():
+            if newRoom.get_id() == channel_id:
+                currRoom = newRoom
+
+        if currRoom is None:
+            await interaction.followup.send(
+                "*You are not currently in a room. Please contact an admin if you believe this is a mistake.*"
+            )
+            return
+
+        exits = currRoom.get_exits()
+
+        if len(exits) == 0:
+            await interaction.followup.send(f"*There are no exits in the room **{str(currRoom.get_name())}**.*")
+            return
+
+        currExitName = None
+        currExit = None
+        for exit in exits:
+            if exit.get_room1() == currRoom.get_name():
+                if helpers.simplify_string(exit.get_room2()) == helpers.simplify_string(exit_name):
+                    currExitName = exit.get_room2()
+                    currExit = exit
+            else:
+                if helpers.simplify_string(exit.get_room1()) == helpers.simplify_string(exit_name):
+                    currExitName = exit.get_room1()
+                    currExit = exit
+
+        if currExitName is None:
+            await interaction.followup.send(f"*There is no exit to the room **{exit_name}** from **{currRoom.get_name()}**. Please use `/exits` to see a list of exits in the current room.*")
+            return
+
+        if currExit.get_locked_state():
+            await interaction.followup.send(f"***{player.get_name()}** tried to enter the room **{currExitName}**, but the exit was locked.*")
+            return
+
+        player.set_room(room)
+        data.save()
+
+        currChannel = self.bot.get_channel(int(currRoom.get_id()))
+
+        channel = self.bot.get_channel(int(room.get_id()))
+        user = self.bot.get_user(int(player.get_id()))
+
+        if channel is None:
+            await interaction.followup.send(f"*Could not find the channel for **{exit_name}**. The room may need to be fixed — please contact an admin.*")
+
+        if currRoom is not None and currChannel is None:
+            await interaction.followup.send(f"*Could not find the channel for **{currChannel.get_name()}**. The room may need to be fixed — please contact an admin.*")
+
+        if user is None:
+            await interaction.followup.send(f"*Could not find the user <@{player.get_id()}>. The player may need to be fixed — please contact an admin.*")
+
+        await interaction.followup.send(f"***{player.get_name()}** moved to **{currExitName}**.*")
+
+        if currChannel is not None:
+            await channel.send(f"***{player.get_name()}** entered from **{currRoom.get_name()}**.*")
+        else:
+            await channel.send(f"***{player.get_name()}** entered.*")
+
+        if currChannel is not None:
+            await currChannel.set_permissions(user, read_messages = None)
+
+        await channel.set_permissions(user, read_messages = True)
+    #endregion
+    #region /description
+    @app_commands.command(name = "description", description = "Get the room's description.")
+    async def desc(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
+        channel_id = interaction.channel_id
+        player_id = interaction.user.id
+        player = helpers.get_player_from_id(player_id)
+        room = helpers.get_room_from_id(channel_id)
+
+        if await helpers.check_paused(player, interaction):
+            return
+
+        if room is None:
+            await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake*.")
+            return
+
+        lookedAt = f"Looked around the room **{room.get_name()}**"
+        topic = interaction.channel.topic
+
+        if player is not None:
+            lookedAt = f"**{player.get_name()}** looked around the room **{room.get_name()}**"
+        if topic is None:
+            topic = f"`{room.get_name()} has no description.`"
+
+        await interaction.followup.send(f"*{lookedAt}*:\n\n{topic}")
+    #endregion
     #region /roll
     @app_commands.command(name = "roll", description = "Roll for a random number.")
     @app_commands.describe(max_num = "The maximum number for the roll.")
