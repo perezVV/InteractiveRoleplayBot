@@ -26,7 +26,7 @@ class LookGroup(app_commands.Group):
             return
         if await helpers.check_room_exists(interaction, current_room):
             return
-        if await helpers.handle_view_more(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
 
         await interaction.response.defer(thinking=True)
@@ -75,7 +75,7 @@ class LookGroup(app_commands.Group):
         searched_obj = await helpers.check_object_exists(interaction, current_room, object_name)
         if searched_obj is None:
             return
-        if await helpers.handle_view_more(interaction, "object", object_name):
+        if await helpers.handle_smart_autocomplete(interaction, "object", object_name):
             return
 
         await interaction.response.defer(thinking=True)
@@ -143,9 +143,9 @@ class LookGroup(app_commands.Group):
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player, True)
         if searched_obj is None:
             return
-        if await helpers.handle_view_more(interaction, "object", object_name):
+        if await helpers.handle_smart_autocomplete(interaction, "object", object_name):
             return
-        if await helpers.handle_view_more(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
 
         await interaction.response.defer(thinking=True)
@@ -190,7 +190,7 @@ class LookGroup(app_commands.Group):
 
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_view_more(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
 
         await interaction.response.defer(thinking=True)
@@ -226,7 +226,7 @@ class LookGroup(app_commands.Group):
 
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_view_more(interaction, "item", clothes_name):
+        if await helpers.handle_smart_autocomplete(interaction, "item", clothes_name):
             return
 
         await interaction.response.defer(thinking=True)
@@ -262,7 +262,7 @@ class LookGroup(app_commands.Group):
 
         if await helpers.check_paused(looking_player, interaction):
             return
-        if await helpers.handle_view_more(interaction, "player", player_name):
+        if await helpers.handle_smart_autocomplete(interaction, "player", player_name):
             return
 
         await interaction.response.defer(thinking=True)
