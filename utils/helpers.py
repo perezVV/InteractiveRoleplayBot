@@ -136,14 +136,14 @@ async def handle_view_more(interaction: discord.Interaction, element_type: str, 
 #region Check if player is paused TODO: swap interaction/player; currently many commands still just use this command so it would break a lot to swap them rn
 async def check_paused(player: typing.Optional[Player], interaction: discord.Interaction) -> bool:
     if player is not None and player.is_paused():
-        await interaction.followup.send(content="*Player commands are currently paused. Please wait until the admin unpauses your ability to use player commands.*", ephemeral=True)
+        await interaction.response.send_message(content="*Player commands are currently paused. Please wait until the admin unpauses your ability to use player commands.*", ephemeral=True)
         return True
     return False
 #endregion
 #region Check if player exists
 async def check_player_exists(interaction: discord.Interaction, player: typing.Optional[Player]) -> bool:
     if player == None or not player.get_name() in playerdata.keys():
-        await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        await interaction.response.send_message("*You are not a valid player. Please contact the admin if you believe this is a mistake.")
         return True
     return False
 #endregion
@@ -159,7 +159,7 @@ async def check_valid_player(interaction: discord.Interaction, player: Player) -
 #region Check if the player is in a room
 async def check_room_exists(interaction: discord.Interaction, room: typing.Optional[Room]) -> bool:
     if room is None:
-        await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
+        await interaction.response.send_message("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
         return True
     return False
 #endregion
@@ -168,6 +168,10 @@ async def check_object_exists(interaction: discord.Interaction, room: typing.Opt
     if await check_room_exists(interaction, room):
         return None
     
+    if len(room.get_objects()) == 0:
+        await interaction.response.send_message("*No objects could be found in the room.*")
+        return
+
     searched_obj = None
     for obj in room.get_objects():
         if simplify_string(obj.get_name()) == simplify_string(object_name):
@@ -175,13 +179,13 @@ async def check_object_exists(interaction: discord.Interaction, room: typing.Opt
             break
     
     if searched_obj is None:
-        await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
+        await interaction.response.send_message(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
         return None
     
     return searched_obj
 #endregion
 #region Check if object is a container
-async def check_obj_container(interaction: discord.Interaction, room: typing.Optional[Room], object_name: str, player: Player) -> typing.Optional[Object]:
+async def check_obj_container(interaction: discord.Interaction, room: typing.Optional[Room], object_name: str, player: Player, display_matters: bool = False) -> typing.Optional[Object]:
     
     searched_obj = await check_object_exists(interaction, room, object_name)
 
@@ -189,11 +193,17 @@ async def check_obj_container(interaction: discord.Interaction, room: typing.Opt
         return None
     
     if not searched_obj.get_container_state():
-            await interaction.followup.send(f"***{player.get_name()}** tried to use the object **{searched_obj.get_name()}**, but it was not a container.*")
+            await interaction.response.send_message(f"***{player.get_name()}** tried to use the object **{searched_obj.get_name()}**, but it was not a container.*")
             return None
 
+    is_display = False
+    if display_matters:
+        is_display = searched_obj.get_display_state() if hasattr(searched_obj, "isDisplay") else False
+
     if searched_obj.get_locked_state():
-        await interaction.followup.send(f"***{player.get_name()}** tried to use the object **{searched_obj.get_name()}**, but it was locked.*")
+        if display_matters and is_display:
+            return searched_obj
+        await interaction.response.send_message(f"***{player.get_name()}** tried to use the object **{searched_obj.get_name()}**, but it was locked.*")
         return None
     
     return searched_obj

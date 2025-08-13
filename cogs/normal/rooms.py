@@ -201,50 +201,6 @@ class RoomCMDs(commands.Cog):
         await interaction.followup.send(f"***{player.get_name()}** tried to unlock the exit to **{searchedExitName}**, but **{searchedItem.get_name()}** was not the key.*")
         return
     #endregion
-    #region /takewear
-    @app_commands.command(name = "takewear", description = "Take a clothing item from the room and wear it.")
-    @app_commands.describe(item_name = "The clothing item you wish to wear.")
-    @app_commands.autocomplete(item_name=autocompletes.room_items_autocomplete)
-    async def takewear(self, interaction: discord.Interaction, item_name: str):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        currRoom = helpers.get_room_from_id(channel_id)
-
-        if await helpers.check_paused(player, interaction):
-            return
-
-        if player is None or player.get_name() not in data.playerdata.keys():
-            await interaction.followup.send("*You are not a valid player. Please contact the admin if you believe this is a mistake.*")
-            return
-
-        if currRoom is None:
-            await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
-            return
-
-        clothesWeight = player.get_clothes_weight()
-        itemList = currRoom.get_items()
-
-        for item in itemList:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                if item.get_wearable_state():
-                    if (clothesWeight + item.get_weight()) > data.get_max_wear_weight():
-                        if len(player.get_clothes()) == 0:
-                            await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but it was too heavy.*")
-                            return    
-                        await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but they were wearing too much already.*")
-                        return
-                    player.add_clothes(item)
-                    currRoom.del_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** took and wore the item **{item.get_name()}**.*")
-                else:
-                    await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but it was not a piece of clothing.*")
-                return
-            
-        await interaction.followup.send(f"Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
-    #endregion
     #region /items
     @app_commands.command(name = "items", description = "List all of the items in the current room.")
     async def items(self, interaction: discord.Interaction):
@@ -276,53 +232,6 @@ class RoomCMDs(commands.Cog):
             await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n`No items could be found in the room.`")
             return
         await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n{allItems}")
-    #endregion
-    #region /lookitem
-    @app_commands.command(name = "lookitem", description = "Get the description of a specific item in the current room.")
-    @app_commands.describe(item_name = "The name of the item you wish to look at.")
-    @app_commands.autocomplete(item_name=autocompletes.room_items_autocomplete)
-    async def lookitem(self, interaction: discord.Interaction, item_name: str):
-        await interaction.response.defer(thinking=True)
-        channel_id = interaction.channel_id
-        player_id = interaction.user.id
-        player = helpers.get_player_from_id(player_id)
-        currRoom = helpers.get_room_from_id(channel_id)
-
-        if await helpers.check_paused(player, interaction):
-            return
-
-        if currRoom is None:
-            await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
-            return
-        
-        itemList = currRoom.get_items()
-
-        if len(itemList) == 0:
-            await interaction.followup.send("*No items could be found in the room.*")
-            return
-        
-        searchedItem = None
-        for item in itemList:
-            if helpers.simplify_string(item.get_name()) == helpers.simplify_string(item_name):
-                searchedItem = item
-        
-        if searchedItem is None:
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/items` to see a list of all the items in the current room.*")
-            return
-        
-        if player is not None:
-            if searchedItem.get_desc() == '':
-                await interaction.followup.send(f"***{player.get_name()}** looked at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{str(searchedItem.get_weight())}`\n__`Wearable`__: `{str(searchedItem.get_wearable_state())}`\n\nItem has no description.")
-                return
-            else:
-                await interaction.followup.send(f"***{player.get_name()}** looked at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{str(searchedItem.get_weight())}`\n__`Wearable`__: `{str(searchedItem.get_wearable_state())}`\n\n{searchedItem.get_desc()}")
-            return
-        
-        if searchedItem.get_desc() == '':
-            await interaction.followup.send(f"*Looked at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{str(searchedItem.get_weight())}`\n__`Wearable`__: `{str(searchedItem.get_wearable_state())}`\n\nItem has no description.")
-            return
-
-        await interaction.followup.send(f"*Looked at the item **{searchedItem.get_name()}**:*\n\n__`{searchedItem.get_name()}`__\n\n__`Weight`__: `{str(searchedItem.get_weight())}`\n__`Wearable`__: `{str(searchedItem.get_wearable_state())}`\n\n{searchedItem.get_desc()}")
     #endregion
 
 async def setup(bot: commands.Bot):

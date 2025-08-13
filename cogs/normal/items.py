@@ -21,11 +21,11 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.check_room_exists(interaction, room):
+        if await helpers.check_room_exists(interaction, current_room):
             return
         if await helpers.handle_view_more(interaction, "item", item_name):
             return
@@ -33,7 +33,7 @@ class ItemCMDs(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         inv_weight = player.get_weight()
-        item_list = room.get_items()
+        item_list = current_room.get_items()
 
         if amount in {0, 1}:
             for item in item_list:
@@ -42,7 +42,7 @@ class ItemCMDs(commands.Cog):
                         await interaction.followup.send(f"***{player.get_name()}** tried to take the item **{item.get_name()}**, but they could not fit it into their inventory.*")
                         return
                     player.add_item(item)
-                    room.del_item(item)
+                    current_room.del_item(item)
                     data.save()
                     await interaction.followup.send(f"***{player.get_name()}** took the item **{item.get_name()}***.")
                     return
@@ -81,7 +81,7 @@ class ItemCMDs(commands.Cog):
                 return
             for i in range(amount):
                 player.add_item(items_found[i])
-                room.del_item(items_found[i])
+                current_room.del_item(items_found[i])
             data.save()
             await interaction.followup.send(
                 f"***{player.get_name()}** took **{amount}** of the item **{searched_item.get_name()}***."
@@ -104,11 +104,11 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
-        searched_obj = await helpers.check_obj_container(interaction, room, object_name, player)
+        searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
 
@@ -182,11 +182,11 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.check_room_exists(interaction, room):
+        if await helpers.check_room_exists(interaction, current_room):
             return
 
         item_list = player.get_items()
@@ -195,7 +195,7 @@ class ItemCMDs(commands.Cog):
             for item in item_list:
                 if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
                     player.del_item(item)
-                    room.add_item(item)
+                    current_room.add_item(item)
                     data.save()
                     await interaction.followup.send(f"***{player.get_name()}** dropped the item **{item.get_name()}**.*")
                     return
@@ -228,7 +228,7 @@ class ItemCMDs(commands.Cog):
         try:
             for i in range(amount):
                 player.del_item(items_found[i])
-                room.add_item(items_found[i])
+                current_room.add_item(items_found[i])
             data.save()
             await interaction.followup.send(
                 f"***{player.get_name()}** dropped **{amount}** of the item **{searched_item.get_name()}**.*"
@@ -251,11 +251,11 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
-        searched_obj = await helpers.check_obj_container(interaction, room, object_name, player)
+        searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
 
@@ -337,7 +337,7 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
@@ -369,10 +369,10 @@ class ItemCMDs(commands.Cog):
             return
         
         if container.value == 1:
-            if await helpers.check_room_exists(interaction, room):
+            if await helpers.check_room_exists(interaction, current_room):
                 return
 
-            item_list = room.get_items()
+            item_list = current_room.get_items()
 
             for item in item_list:
                 if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
@@ -384,7 +384,7 @@ class ItemCMDs(commands.Cog):
                             await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but they were wearing too much.*")
                             return
                         player.add_clothes(item)
-                        room.del_item(item)
+                        current_room.del_item(item)
                         data.save()
                         await interaction.followup.send(f"***{player.get_name()}** took and wore the item **{item.get_name()}**.*")
                     else:
@@ -407,11 +407,11 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
-        searched_obj = await helpers.check_obj_container(interaction, room, object_name, player)
+        searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
         
@@ -452,7 +452,7 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
@@ -472,11 +472,11 @@ class ItemCMDs(commands.Cog):
                     return
 
                 if container.value == 1:
-                    if await helpers.check_room_exists(interaction, room):
+                    if await helpers.check_room_exists(interaction, current_room):
                         return
                         
                     player.del_clothes(item)
-                    room.add_item(item)
+                    current_room.add_item(item)
                     data.save()
                     await interaction.followup.send(f"***{player.get_name()}** took off and dropped the item **{item.get_name()}**.*")
                     return
@@ -494,11 +494,11 @@ class ItemCMDs(commands.Cog):
         id = interaction.user.id
         channel_id = interaction.channel_id
         player = helpers.get_player_from_id(id)
-        room = helpers.get_room_from_id(channel_id)
+        current_room = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_valid_player(interaction, player):
             return
-        searched_obj = await helpers.check_obj_container(interaction, room, object_name, player)
+        searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
         
