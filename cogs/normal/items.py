@@ -18,7 +18,7 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "[OPTIONAL] The amount you wish to take.")
     @app_commands.autocomplete(item_name=autocompletes.room_items_autocomplete)
     async def take(self, interaction: discord.Interaction, item_name: str, amount: int = 0):
-        # Get the player and room objects for this interaciton
+        # Get the player and room class objects for this interaction
         player = helpers.get_player_from_id(interaction.user.id)
         current_room = helpers.get_room_from_id(interaction.channel_id)
 
@@ -33,17 +33,19 @@ class ItemCMDs(commands.Cog):
         # Defer the response while processing the code
         await interaction.response.defer(thinking=True)
 
-        # Assign relevant variables for item handling
-        inv_weight = player.get_weight()
+        # Get the list of items necessary for future logic
         item_list = current_room.get_items()
 
+        # Whittle the list down into matching items; return if there are none
         found_items = await helpers.find_items_in_list(interaction, item_list, item_name, amount, "take")
         if found_items is None:
             return
         
+        # Check if the player has enough space to carry the items they intend to pick up
         if not await helpers.can_carry(interaction, found_items, player, "take", amount):
             return
 
+        # Transfer the item from the room into their inventory, send confirmation message
         return await interaction.followup.send(helpers.transfer_item(current_room, player, found_items, "take", amount))
     #region /takefrom
     @app_commands.command(name = "takefrom", description = "Take an item from an object in the room.")
@@ -52,77 +54,36 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "The amount of that item you wish to take.")
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete, item_name=autocompletes.object_contents_autocomplete)
     async def takefrom(self, interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+        # Get the player and room class objects for this interaciton
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
+            return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
 
-        inv_weight = player.get_weight()
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
+
+        # Get the list of items necessary for future logic
         item_list = searched_obj.get_items()
 
-        if amount in {0, 1}:
-            for item in item_list:
-                if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    if (inv_weight + item.get_weight()) > data.get_max_carry_weight():
-                        await interaction.followup.send(f"***{player.get_name()}** tried to take the item **{item.get_name()}** from the object **{searched_obj.get_name()}**, but they could not fit it into their inventory.*")
-                        return
-                    player.add_item(item)
-                    searched_obj.del_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** took the item **{item.get_name()}** from **{searched_obj.get_name()}***.")
-                    return
-            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/contents` to see a list of items in an object.*")
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, amount, "takefrom")
+        if found_items is None:
             return
-
-        if amount < 0:
-            await interaction.followup.send(
-                f"***{amount}** is an invalid input; please use a positive number.*"
-            )
+        
+        # Check if player has enough space to carry the items they intend to pick up
+        if not await helpers.can_carry(interaction, found_items, player, "takefrom", amount):
             return
-
-        items_found: typing.List[data.Item] = []
-        searched_item = None
-        for item in item_list:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                searched_item = item
-                items_found.append(searched_item)
-
-        if not items_found or not searched_item:
-            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
-            return
-
-        if len(items_found) < amount:
-            await interaction.followup.send(
-                f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*"
-            )
-            return
-        try:
-            new_carry_weight = sum(items_found[i].get_weight() for i in range(amount))
-            if (inv_weight + new_carry_weight) > data.get_max_carry_weight():
-                await interaction.followup.send(
-                    f"***{player.get_name()}** tried to take **{amount}** of the item **{searched_item.get_name()}** from the object **{searched_obj.get_name()}**, but they could not fit that much into their inventory.*"
-                )
-                return
-            for i in range(amount):
-                player.add_item(items_found[i])
-                searched_obj.del_item(items_found[i])
-            data.save()
-            await interaction.followup.send(
-                f"***{player.get_name()}** took **{amount}** of the item **{searched_item.get_name()}** from **{searched_obj.get_name()}***."
-            )
-            return
-        except Exception:
-            await interaction.followup.send(
-                f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*"
-            )
-            return
+        
+        # Transfer the item from the object into their inventory, send confirmation message
+        return await interaction.followup.send(helpers.transfer_item(searched_obj, player, found_items, "takefrom", amount))
     #endregion
     #region /drop
     @app_commands.command(name = "drop", description = "Drop an item from your inventory into the room.")

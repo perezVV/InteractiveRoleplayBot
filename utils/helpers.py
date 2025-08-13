@@ -220,7 +220,7 @@ def transfer_item(
         add_to(dest, item_list[0], dest_type)
         delete_from(source, item_list[0], source_type)
         save()
-        return ITEM_MESSAGES[message_type]["single"](dest, item_list[0])
+        return ITEM_MESSAGES[message_type]["single"](player=dest, item=item_list[0], obj=source)
     
     if amount > 1:
         for i in range(amount):
