@@ -8,45 +8,129 @@ import utils.data as data
 import utils.helpers as helpers
 import utils.autocompletes as autocompletes
 
-class RoomCMDs(commands.Cog):
+class LockCMDs(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    #region /exits
-    @app_commands.command(name = "exits", description = "List all locations that are connected to your current room.")
-    async def exits(self, interaction: discord.Interaction):
+    #region /lockobject
+    @app_commands.command(name = "lockobject", description = "Lock an object in the current room using a key from your inventory.")
+    @app_commands.describe(object_name = "The name of the object you wish to lock.")
+    @app_commands.describe(key_name = "The name of the item in your inventory that can lock the object.")
+    @app_commands.autocomplete(object_name=autocompletes.object_autocomplete, key_name=autocompletes.user_items_autocomplete)
+    async def lockobject(self, interaction: discord.Interaction, object_name: str, key_name: str):
         await interaction.response.defer(thinking=True)
-        channel_id = interaction.channel_id
         player_id = interaction.user.id
         player = helpers.get_player_from_id(player_id)
+        channel_id = interaction.channel_id
         currRoom = helpers.get_room_from_id(channel_id)
 
         if await helpers.check_paused(player, interaction):
+            return
+
+        if player is None or player.get_name() not in data.playerdata.keys():
+            await interaction.followup.send("You are not a valid player. Please contact an admin if you believe this is a mistake.")
             return
 
         if currRoom is None:
             await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
             return
 
-        exits = currRoom.get_exits()
+        searchedObj = None
+        for object in currRoom.get_objects():
+            if helpers.simplify_string(object.get_name()) == helpers.simplify_string(object_name):
+                searchedObj = object
 
-        if len(exits) == 0:
-            await interaction.followup.send(f"***{player.get_name()}** looked at the exits in the room **{currRoom.get_name()}**:*\n\n`No exits found.`")
+        if searchedObj is None:
+            await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
             return
 
-        exitNames: typing.List[str] = []
-        for exit in exits:
-            currExit = ''
-            if exit.get_room1() == currRoom.get_name():
-                currExit = exit.get_room2()
-            else:
-                currExit = exit.get_room1()
-            if exit.get_locked_state():
-                currExit = f'{currExit} (Locked)'
-            exitNames.append(f"`{currExit}`")
+        if not searchedObj.get_container_state():
+            await interaction.followup.send(f"***{player.get_name()}** tried to lock **{searchedObj.get_name()}**, but it had no lock.*")
+            return
 
-        allExits = ', '.join(exitNames)
-        await interaction.followup.send(f"***{player.get_name()}** looked at the exits in the room **{currRoom.get_name()}**:*\n\n{allExits}")
+        if searchedObj.get_locked_state():
+            await interaction.followup.send(f"***{player.get_name()}** tried to lock the object **{searchedObj.get_name()}**, but it was already locked.*")
+            return
+
+        searchedItem = None
+
+        itemList = player.get_items()
+        for item in itemList:
+            if helpers.simplify_string(item.get_name()) == helpers.simplify_string(key_name):
+                searchedItem = item
+
+        if searchedItem is None:
+            await interaction.followup.send(f"*Could not find the item **{key_name}**. Please use `/inventory` to see a list of all the items in your inventory.*")
+            return
+
+        if helpers.simplify_string(searchedObj.get_key_name()) == helpers.simplify_string(searchedItem.get_name()):
+            searchedObj.switch_locked_state(True)
+            data.save()
+            await interaction.followup.send(f"***{player.get_name()}** locked the object **{searchedObj.get_name()}** using **{searchedItem.get_name()}**.*")
+            return
+
+        await interaction.followup.send(f"***{player.get_name()}** tried to lock the object **{searchedObj.get_name()}**, but **{searchedItem.get_name()}** was not the key.*")
+        return
+    #endregion
+    #region /unlockobject
+    @app_commands.command(name = "unlockobject", description = "Unlock an object in the current room using a key from your inventory.")
+    @app_commands.describe(object_name = "The name of the object you wish to unlock.")
+    @app_commands.describe(key_name = "The name of the item in your inventory that can unlock the object.")
+    @app_commands.autocomplete(object_name=autocompletes.object_autocomplete, key_name=autocompletes.user_items_autocomplete)
+    async def unlockobject(self, interaction: discord.Interaction, object_name: str, key_name: str):
+        await interaction.response.defer(thinking=True)
+        player_id = interaction.user.id
+        player = helpers.get_player_from_id(player_id)
+        channel_id = interaction.channel_id
+        currRoom = helpers.get_room_from_id(channel_id)
+
+        if await helpers.check_paused(player, interaction):
+            return
+
+        if player is None or player.get_name() not in data.playerdata.keys():
+            await interaction.followup.send("*You are not a valid player. Please contact an admin if you believe this is a mistake.*")
+            return
+
+        if currRoom is None:
+            await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
+            return
+
+        searchedObj = None
+        for object in currRoom.get_objects():
+            if helpers.simplify_string(object.get_name()) == helpers.simplify_string(object_name):
+                searchedObj = object
+
+        if searchedObj is None:
+            await interaction.followup.send(f"*Could not find the object **{object_name}**. Please use `/objects` to see a list of all the objects in the current room.*")
+            return
+
+        if not searchedObj.get_container_state():
+            await interaction.followup.send(f"***{player.get_name()}** tried to unlock **{searchedObj.get_name()}**, but it had no lock.*")
+            return
+
+        if not searchedObj.get_locked_state():
+            await interaction.followup.send(f"***{player.get_name()}** tried to unlock the object **{searchedObj.get_name()}**, but it was already unlocked.*")
+            return
+
+        searchedItem = None
+
+        itemList = player.get_items()
+        for item in itemList:
+            if helpers.simplify_string(item.get_name()) == helpers.simplify_string(key_name):
+                searchedItem = item
+
+        if searchedItem is None:
+            await interaction.followup.send(f"*Could not find the item **{key_name}**. Please use `/inventory` to see a list of all the items in your inventory.*")
+            return
+
+        if helpers.simplify_string(searchedObj.get_key_name()) == helpers.simplify_string(searchedItem.get_name()):
+            searchedObj.switch_locked_state(False)
+            data.save()
+            await interaction.followup.send(f"***{player.get_name()}** unlocked the object **{searchedObj.get_name()}** using **{searchedItem.get_name()}**.*")
+            return
+
+        await interaction.followup.send(f"***{player.get_name()}** tried to unlock the object **{searchedObj.get_name()}**, but **{searchedItem.get_name()}** was not the key.*")
+        return
     #endregion
     #region /lockexit
     @app_commands.command(name = "lockexit", description = "Locks an exit that is connected to the current room using a key.")
@@ -201,38 +285,6 @@ class RoomCMDs(commands.Cog):
         await interaction.followup.send(f"***{player.get_name()}** tried to unlock the exit to **{searchedExitName}**, but **{searchedItem.get_name()}** was not the key.*")
         return
     #endregion
-    #region /items
-    @app_commands.command(name = "items", description = "List all of the items in the current room.")
-    async def items(self, interaction: discord.Interaction):
-        await interaction.response.defer(thinking=True)
-        channel_id = interaction.channel_id
-        player_id = interaction.user.id
-        player = helpers.get_player_from_id(player_id)
-        currRoom = helpers.get_room_from_id(channel_id)
-
-        if await helpers.check_paused(player, interaction):
-            return
-
-        if currRoom is None:
-            await interaction.followup.send("*You are not currently in a room. Please contact an admin if you believe this is a mistake.*")
-            return
-
-        itemList = currRoom.get_items()
-        itemNames = [f"`{item.get_name()}`" for item in itemList]
-        allItems = ', '.join(itemNames)
-
-        if player is None:
-            if len(itemList) == 0:
-                await interaction.followup.send(f"*Looked at the items in the room **{str(currRoom.get_name())}**:*\n\n`No items found.`")
-                return
-            await interaction.followup.send(f"*Looked at the items in the room **{str(currRoom.get_name())}**:*\n\n{allItems}")
-            return
-
-        if len(itemList) == 0:
-            await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n`No items could be found in the room.`")
-            return
-        await interaction.followup.send(f"***{player.get_name()}** looked at the items in the room **{str(currRoom.get_name())}**:*\n\n{allItems}")
-    #endregion
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(RoomCMDs(bot))
+    await bot.add_cog(LockCMDs(bot))

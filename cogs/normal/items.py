@@ -55,7 +55,7 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "The amount of that item you wish to take.")
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete, item_name=autocompletes.object_contents_autocomplete)
     async def takefrom(self, interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
-        # Get the player and room class objects for this interaciton
+        # Get the player and room class objects for this interaction
         player = helpers.get_player_from_id(interaction.user.id)
         current_room = helpers.get_room_from_id(interaction.channel_id)
 
@@ -125,7 +125,7 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "The amount of that item you wish to drop.")
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete, item_name=autocompletes.user_items_autocomplete)
     async def dropinto(self, interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
-        # Get the player and room class objects for this interaciton
+        # Get the player and room class objects for this interaction
         player = helpers.get_player_from_id(interaction.user.id)
         current_room = helpers.get_room_from_id(interaction.channel_id)
 
@@ -166,7 +166,7 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(item_name = "The clothing item you wish to wear.")
     @app_commands.autocomplete(item_name=autocompletes.user_or_room_items_autocomplete)
     async def wear(self, interaction: discord.Interaction, container: app_commands.Choice[int], item_name: str):
-        # Get the player and room class objects for this interaciton
+        # Get the player and room class objects for this interaction
         player = helpers.get_player_from_id(interaction.user.id)
         current_room = helpers.get_room_from_id(interaction.channel_id)
 
@@ -213,7 +213,7 @@ class ItemCMDs(commands.Cog):
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete)
     @app_commands.autocomplete(item_name=autocompletes.object_contents_autocomplete)
     async def wearfrom(self, interaction: discord.Interaction, object_name: str, item_name: str):
-        # Get the player and room class objects for this interaciton
+        # Get the player and room class objects for this interaction
         player = helpers.get_player_from_id(interaction.user.id)
         current_room = helpers.get_room_from_id(interaction.channel_id)
 
@@ -297,7 +297,7 @@ class ItemCMDs(commands.Cog):
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete)
     @app_commands.autocomplete(item_name=autocompletes.clothing_autocomplete)
     async def undressinto(self,interaction: discord.Interaction, object_name: str, item_name: str):
-        # Get the player and room class objects for this interaciton
+        # Get the player and room class objects for this interaction
         player = helpers.get_player_from_id(interaction.user.id)
         current_room = helpers.get_room_from_id(interaction.channel_id)
 
