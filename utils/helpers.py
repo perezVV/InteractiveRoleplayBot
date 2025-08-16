@@ -14,6 +14,8 @@ MAX_CHOICES = 25
 hidden_items_cache = defaultdict(list)
 hidden_items_lock = asyncio.Lock()
 
+Container = Union["Room", "Object", "Player"]
+
 #region Get Class methods
 
 #region Get player from ID
@@ -47,17 +49,17 @@ def get_room_from_name(name: str) -> typing.Optional[Room]:
 
 #region Validation methods
 
-#region Check if player is paused TODO: swap interaction/player; currently many commands still just use this command so it would break a lot to swap them rn
+#region Check if player is paused TODO: swap interaction/player for parity; currently many commands still just use this command so it would break a lot to swap them rn. wait until the end
 async def check_paused(player: typing.Optional[Player], interaction: discord.Interaction) -> bool:
     if player is not None and player.is_paused():
-        await interaction.response.send_message(content="*Player commands are currently paused. Please wait until the admin unpauses your ability to use player commands.*", ephemeral=True)
+        await interaction.response.send_message(content="*Player commands are currently paused. Please wait until an admin unpauses.*", ephemeral=True)
         return True
     return False
 #endregion
 #region Check if player exists
 async def check_player_exists(interaction: discord.Interaction, player: typing.Optional[Player]) -> bool:
     if player == None or not player.get_name() in playerdata.keys():
-        await interaction.response.send_message("*You are not a valid player. Please contact the admin if you believe this is a mistake.")
+        await interaction.response.send_message("*You are not a valid player. Please contact an admin if you believe this is a mistake.", ephemeral=True)
         return True
     return False
 #endregion
@@ -158,20 +160,35 @@ def find_items(name: str) -> typing.List[typing.Tuple[Item, str]]:
     return foundItems
 #endregion
 #region Find all local items with a shared name
-async def find_items_in_list(interaction: discord.Interaction, item_list: typing.List[Item], item_name: str, amount: int = 0, message_type: str = "None") -> typing.List[Item]:
+async def find_items_in_list(
+        interaction: discord.Interaction, 
+        item_list: typing.List[Item], 
+        item_name: str, 
+        amount: int = 0, 
+        message_type: str = "None", 
+        source: typing.Optional[Container] = None,
+        is_clothing: bool = False
+        ) -> typing.List[Item]:
     found_items = [item for item in item_list if simplify_string(item.get_name()) == simplify_string(item_name)]
 
     if amount < 0:
-        await interaction.followup.send(INVALID_MESSAGES["items"]["negative"](amount))
+        await interaction.followup.send(INVALID_MESSAGES["items"]["negative"](amount=amount))
         return None
 
     if not found_items:
-        await interaction.followup.send(ITEM_MESSAGES[message_type]["not_found"](item_name))
+        await interaction.followup.send(ITEM_MESSAGES[message_type]["not_found"](item_name=item_name, obj=source))
         return None
     
-    if len(found_items) < amount:
-        await interaction.followup.send(ITEM_MESSAGES[message_type]["not_enough"](amount, item_name))
+    if len(found_items) < amount and not is_clothing:
+        await interaction.followup.send(ITEM_MESSAGES[message_type]["not_enough"](amount=amount, item_name=item_name, obj=source))
         return None
+
+    if is_clothing:
+        wearable_item = next((item for item in found_items if item.get_wearable_state()), None)
+        if not wearable_item:
+            await interaction.followup.send(ITEM_MESSAGES[message_type]["not_wearable"](player=get_player_from_id(interaction.user.id), item=found_items[0], obj=source))
+            return None
+        return [wearable_item]
 
     if amount in (0, 1):
         return found_items[:1]
@@ -179,55 +196,91 @@ async def find_items_in_list(interaction: discord.Interaction, item_list: typing
         return found_items[:amount]
 #endregion
 
-#region Check if new calculate carry weight is allowed
-async def can_carry(interaction: discord.Interaction, item_list: typing.List[Item], player: Player, message_type: str, amount: int = 0, container: str = "inv") -> bool:
-    current_weight = player.get_clothes_weight() if container == "clothes" else player.get_weight()
-    max_weight = get_max_wear_weight() if container == "clothes" else get_max_carry_weight()
+#region Check if an item can fit into the player's inventory/clothes
+async def can_carry(
+        interaction: discord.Interaction, 
+        item_list: typing.List[Item], 
+        player: Player, 
+        message_type: str, 
+        amount: int = 0, 
+        source: typing.Optional[Container] = None,
+        is_clothing: bool = False,
+        ) -> bool:
+    current_weight = player.get_clothes_weight() if is_clothing else player.get_weight()
+    max_weight = get_max_wear_weight() if is_clothing else get_max_carry_weight()
 
     if amount in (0, 1):
         if (current_weight + item_list[0].get_weight() > max_weight):
-            await interaction.followup.send(ITEM_MESSAGES[message_type]["full"](player, item_list[0]))
+            if is_clothing and item_list[0].get_weight() > max_weight:
+                await interaction.followup.send(ITEM_MESSAGES[message_type]["heavy"](player=player, item=item_list[0], obj=source))
+                return False
+            await interaction.followup.send(ITEM_MESSAGES[message_type]["full"](player=player, item=item_list[0], obj=source))
+            return False
+        return True
+
+    if amount > 1:
+        accumulated_weight = sum(item_list[i].get_weight() for i in range(amount))
+        if (current_weight + accumulated_weight) > max_weight:
+            await interaction.followup.send(ITEM_MESSAGES[message_type]["full_multiple"](player=player, item=item_list[0], amount=amount, obj=source))
+            return False
+        return True
+#endregion
+#region Check if an item can fit into an object
+async def can_store(
+        interaction: discord.Interaction,
+        player: Player,
+        obj: Object,
+        item_list: typing.List[Item],
+        message_type: str,
+        amount: int = 0
+        ) -> bool:
+    max_storage_amt = obj.get_storage()
+    obj_contents = obj.get_items()
+
+    if amount in (0, 1):
+        if (len(obj_contents) + 1) > max_storage_amt and obj.get_storage() != -1:
+            await interaction.followup.send(ITEM_MESSAGES[message_type]["full"](player=player, item=item_list[0], obj=obj))
             return False
         return True
     
     if amount > 1:
-        accumulated_weight = sum(item_list[i].get_weight() for i in range(amount))
-        if (current_weight + accumulated_weight) > max_weight:
-            await interaction.followup.send(ITEM_MESSAGES[message_type]["full_multiple"](player, item_list[0], amount))
+        accumulated_storage = len(range(amount))
+        if (len(obj_contents) + accumulated_storage) > max_storage_amt and obj.get_storage() != -1:
+            await interaction.followup.send(ITEM_MESSAGES[message_type]["full_multiple"](player=player, amount=amount, item=item_list[0], obj=obj))
             return False
         return True
 #endregion
 #region Transfer an item between containers
-Container = Union["Room", "Object", "Player"]
-
 def transfer_item(
     source: Container, 
     dest: Container, 
+    player: Player,
     item_list: typing.List[Item], 
     message_type: str, 
     amount: int = 0, 
-    source_type: Optional[str] = "items", 
-    dest_type: Optional[str] = "items"
+    obj: Object = None,
+    is_clothes_source: bool = False, 
+    is_clothes_dest: bool = False
     ) -> str:
     
-    def add_to(c: Container, item: Item, c_type: str):
-        return c.add_clothes(item) if c_type == "clothes" else c.add_item(item)
+    def add_to(c: Container, item: Item, is_clothing: bool):
+        return c.add_clothes(item) if is_clothing else c.add_item(item)
     
-    def delete_from(c: Container, item: Item, c_type: str):
-        return c.del_clothes(item) if c_type == "clothes" else c.del_item(item)
+    def delete_from(c: Container, item: Item, is_clothing: bool):
+        return c.del_clothes(item) if is_clothing else c.del_item(item)
     
     if amount in (0, 1):
-        add_to(dest, item_list[0], dest_type)
-        delete_from(source, item_list[0], source_type)
+        add_to(dest, item_list[0], is_clothes_dest)
+        delete_from(source, item_list[0], is_clothes_source)
         save()
-        return ITEM_MESSAGES[message_type]["single"](player=dest, item=item_list[0], obj=source)
+        return ITEM_MESSAGES[message_type]["single"](player=player, item=item_list[0], obj=obj)
     
     if amount > 1:
         for i in range(amount):
-            add_to(dest, item_list[i], dest_type)
-            delete_from(source, item_list[i], source_type)
+            add_to(dest, item_list[i], is_clothes_dest)
+            delete_from(source, item_list[i], is_clothes_source)
             save()
-        return ITEM_MESSAGES[message_type]["multiple"](dest, item_list[0], amount)
+        return ITEM_MESSAGES[message_type]["multiple"](player=player, item=item_list[0], amount=amount, obj=obj)
 #endregion
 
 #region Simplify string

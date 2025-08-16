@@ -33,7 +33,7 @@ class ItemCMDs(commands.Cog):
         # Defer the response while processing the code
         await interaction.response.defer(thinking=True)
 
-        # Get the list of items necessary for future logic
+        # Get the list of items 
         item_list = current_room.get_items()
 
         # Whittle the list down into matching items; return if there are none
@@ -46,7 +46,8 @@ class ItemCMDs(commands.Cog):
             return
 
         # Transfer the item from the room into their inventory, send confirmation message
-        return await interaction.followup.send(helpers.transfer_item(current_room, player, found_items, "take", amount))
+        return await interaction.followup.send(helpers.transfer_item(current_room, player, player, found_items, "take", amount))
+    #endregion
     #region /takefrom
     @app_commands.command(name = "takefrom", description = "Take an item from an object in the room.")
     @app_commands.describe(object_name = "The object you wish to take an item from.")
@@ -70,20 +71,20 @@ class ItemCMDs(commands.Cog):
         # Defer the response while processing the code
         await interaction.response.defer(thinking=True)
 
-        # Get the list of items necessary for future logic
+        # Get the list of items 
         item_list = searched_obj.get_items()
 
         # Whittle the list down into matching items; return if there are none
-        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, amount, "takefrom")
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, amount, "takefrom", searched_obj)
         if found_items is None:
             return
         
         # Check if player has enough space to carry the items they intend to pick up
-        if not await helpers.can_carry(interaction, found_items, player, "takefrom", amount):
+        if not await helpers.can_carry(interaction, found_items, player, "takefrom", amount, searched_obj):
             return
         
         # Transfer the item from the object into their inventory, send confirmation message
-        return await interaction.followup.send(helpers.transfer_item(searched_obj, player, found_items, "takefrom", amount))
+        return await interaction.followup.send(helpers.transfer_item(searched_obj, player, player, found_items, "takefrom", amount, searched_obj))
     #endregion
     #region /drop
     @app_commands.command(name = "drop", description = "Drop an item from your inventory into the room.")
@@ -91,67 +92,31 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "The amount of that item you wish to drop.")
     @app_commands.autocomplete(item_name=autocompletes.user_items_autocomplete)
     async def drop(self, interaction: discord.Interaction, item_name: str, amount: int = 0):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+        # Get the player and room class objects for this interaction
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
         if await helpers.check_room_exists(interaction, current_room):
             return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+            return
 
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
+
+        # Get the list of items 
         item_list = player.get_items()
 
-        if amount in {0, 1}:
-            for item in item_list:
-                if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    player.del_item(item)
-                    current_room.add_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** dropped the item **{item.get_name()}**.*")
-                    return
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, amount, "drop")
+        if found_items is None:
             return
 
-        if amount < 0:
-            await interaction.followup.send(
-                f"***{amount}** is an invalid input; please use a positive number.*"
-            )
-            return
-
-        items_found: typing.List[data.Item] = []
-        searched_item = None
-        for item in item_list:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                searched_item = item
-                items_found.append(searched_item)
-
-        if not items_found or not searched_item:
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-
-        if len(items_found) < amount:
-            await interaction.followup.send(
-                f"*Could not find **{amount}** of the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*"
-            )
-            return
-
-        try:
-            for i in range(amount):
-                player.del_item(items_found[i])
-                current_room.add_item(items_found[i])
-            data.save()
-            await interaction.followup.send(
-                f"***{player.get_name()}** dropped **{amount}** of the item **{searched_item.get_name()}**.*"
-            )
-            return
-        except Exception:
-            await interaction.followup.send(
-                f"*Could not find **{amount}** of the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*"
-            )
-            return
+        # Transfer the item from their inventory into the room
+        return await interaction.followup.send(helpers.transfer_item(player, current_room, player, found_items, "drop", amount))
     #endregion
     #region /dropinto
     @app_commands.command(name = "dropinto", description = "Drop an item from your inventory into an object.")
@@ -160,81 +125,36 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(amount = "The amount of that item you wish to drop.")
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete, item_name=autocompletes.user_items_autocomplete)
     async def dropinto(self, interaction: discord.Interaction, object_name: str, item_name: str, amount: int = 0):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+        # Get the player and room class objects for this interaciton
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
+            return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
 
-        max_storage_amt = searched_obj.get_storage()
-        obj_contents = searched_obj.get_items()
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
+
+        # Get the list of items 
         item_list = player.get_items()
 
-        if amount in {0, 1}:
-            for item in item_list:
-                if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    if (len(obj_contents) + 1) > max_storage_amt and searched_obj.get_storage() != -1:
-                        await interaction.followup.send(f"***{player.get_name()}** tried to drop the item **{item.get_name()}** into the object **{searched_obj.get_name()}**, but there wasn't enough space.*")
-                        return
-                    player.del_item(item)
-                    searched_obj.add_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** dropped the item **{item.get_name()}** into **{searched_obj.get_name()}***.")
-                    return
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, amount, "dropinto")
+        if found_items is None:
             return
 
-        if amount < 0:
-            await interaction.followup.send(
-                f"***{amount}** is an invalid input; please use a positive number.*"
-            )
+        # Check if the object has enough space to fit the items
+        if not await helpers.can_store(interaction, player, searched_obj, found_items, "dropinto", amount):
             return
 
-        items_found: typing.List[data.Item] = []
-        searched_item = None
-        for item in item_list:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                searched_item = item
-                items_found.append(searched_item)
-
-        if not items_found or not searched_item:
-            await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-
-        if len(items_found) < amount:
-            await interaction.followup.send(
-                f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*"
-            )
-            return
-
-        try:
-            new_storage_amt = len(range(amount))
-            if (
-                len(obj_contents) + new_storage_amt
-            ) > max_storage_amt and searched_obj.get_storage() != -1:
-                await interaction.followup.send(
-                    f"***{player.get_name()}** tried to drop **{amount}** of the item **{searched_item.get_name()}** into the object **{searched_obj.get_name()}**, but there wasn't enough space.*"
-                )
-                return
-            for i in range(amount):
-                player.del_item(items_found[i])
-                searched_obj.add_item(items_found[i])
-            data.save()
-            await interaction.followup.send(
-                f"***{player.get_name()}** dropped **{amount}** of the item **{searched_item.get_name()}** into **{searched_obj.get_name()}***."
-            )
-            return
-        except Exception:
-            await interaction.followup.send(
-                f"*Could not find **{amount}** of the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/inventory` to see a list of items in your inventory.*"
-            )
-            return
+        # Transfer the item from the player's inventory into the object, send confirmation message
+        return await interaction.followup.send(helpers.transfer_item(player, searched_obj, player, found_items, "dropinto", amount, searched_obj))
     #endregion
     #region /wear
     @app_commands.command(name = "wear", description = "Wear a clothing item from your inventory or current room.")
@@ -246,68 +166,45 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(item_name = "The clothing item you wish to wear.")
     @app_commands.autocomplete(item_name=autocompletes.user_or_room_items_autocomplete)
     async def wear(self, interaction: discord.Interaction, container: app_commands.Choice[int], item_name: str):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+        # Get the player and room class objects for this interaciton
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+            return
 
-        clothes_weight = player.get_clothes_weight()
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
         
+        # Get the list of items 
+        item_list = []
+        source = None
+        message_type = ""
         if container.value == 0:
             item_list = player.get_items()
-
-            for item in item_list:
-                if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    if item.get_wearable_state():
-                        if (clothes_weight + item.get_weight()) > data.get_max_wear_weight():
-                            if len(player.get_clothes()) == 0:
-                                await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but it was too heavy.*")
-                                return    
-                            await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but they were wearing too much.*")
-                            return
-                        player.add_clothes(item)
-                        player.del_item(item)
-                        data.save()
-                        await interaction.followup.send(f"***{player.get_name()}** wore the item **{item.get_name()}**.*")
-                        return
-                    else:
-                        await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}**, but it was not a piece of clothing.*")
-                        return
-
-            await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/inventory` to see a list of items in your inventory.*")
-            return
-        
+            source = player
+            message_type = "wear"
         if container.value == 1:
             if await helpers.check_room_exists(interaction, current_room):
                 return
-
             item_list = current_room.get_items()
+            source = current_room
+            message_type = "takewear"
 
-            for item in item_list:
-                if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                    if item.get_wearable_state():
-                        if (clothes_weight + item.get_weight()) > data.get_max_wear_weight():
-                            if len(player.get_clothes()) == 0:
-                                await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but it was too heavy.*")
-                                return    
-                            await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but they were wearing too much.*")
-                            return
-                        player.add_clothes(item)
-                        current_room.del_item(item)
-                        data.save()
-                        await interaction.followup.send(f"***{player.get_name()}** took and wore the item **{item.get_name()}**.*")
-                    else:
-                        await interaction.followup.send(f"***{player.get_name()}** tried to take and wear the item **{item.get_name()}**, but it was not a piece of clothing.*")
-                    return
-
-            await interaction.followup.send(f"Could not find the item **{item_name}**. Please use `/items` to see a list of items in the current room.*")
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, 1, message_type, source, True)
+        if found_items is None:
             return
         
-        await interaction.followup.send(f"Could not find the item **{item_name}**.")
+        # Check if player has enough space to carry the items they intend to pick up
+        if not await helpers.can_carry(interaction, found_items, player, message_type, 1, None, True):
+            return
+        
+        # Transfer the item from the source into the player's clothing, send confirmation message
+        return await interaction.followup.send(helpers.transfer_item(source, player, player, found_items, message_type, amount=1, is_clothes_dest=True))
     #endregion
     #region /wearfrom
     @app_commands.command(name = "wearfrom", description = "Wear a clothing item that's located in an object in the room.")
@@ -316,40 +213,36 @@ class ItemCMDs(commands.Cog):
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete)
     @app_commands.autocomplete(item_name=autocompletes.object_contents_autocomplete)
     async def wearfrom(self, interaction: discord.Interaction, object_name: str, item_name: str):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+        # Get the player and room class objects for this interaciton
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
+            return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
         
-        clothes_weight = player.get_clothes_weight()
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
+
+        # Get the list of items 
         item_list = searched_obj.get_items()
 
-        for item in item_list:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                if item.get_wearable_state():
-                    if (clothes_weight + item.get_weight()) > data.get_max_wear_weight():
-                        if len(player.get_clothes()) == 0:
-                            await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}** from **{searched_obj.get_name()}**, but it was too heavy.*")
-                            return    
-                        await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}** from **{searched_obj.get_name()}**, but they were wearing too much.*")
-                        return
-                    player.add_clothes(item)
-                    searched_obj.del_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** wore the item **{item.get_name()}** from **{searched_obj.get_name()}**.*")
-                    return
-                else:
-                    await interaction.followup.send(f"***{player.get_name()}** tried to wear the item **{item.get_name()}** from **{searched_obj.get_name()}**, but it was not a piece of clothing.*")
-                    return
-
-        await interaction.followup.send(f"*Could not find the item **{item_name}** inside of the object **{searched_obj.get_name()}**. Please use `/contents` to see a list of all the items in an object.*")
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, 1, "wearfrom", searched_obj, True)
+        if found_items is None:
+            return
+        
+        # Check if player has enough space to carry the items they intend to pick up
+        if not await helpers.can_carry(interaction, found_items, player, "wearfrom", 1, searched_obj, True):
+            return
+        
+        # Transfer the item from the object into their inventory, send confirmation message
+        return await interaction.followup.send(helpers.transfer_item(searched_obj, player, player, found_items, "wearfrom", amount=1, obj=searched_obj, is_clothes_dest=True))
     #endregion
     #region /undress
     @app_commands.command(name = "undress", description = "Take off a clothing item and place it into your inventory or the current room.")
@@ -361,40 +254,41 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(item_name = "The clothing item you wish to take off.")
     @app_commands.autocomplete(item_name=autocompletes.clothing_autocomplete)
     async def undress(self, interaction: discord.Interaction, container: app_commands.Choice[int], item_name: str):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+        # Get the player and room class objects for this interaction
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
-        
-        item_list = player.get_clothes()
-        
-        for item in item_list:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                if container.value == 0:
-                    if (player.get_weight() + item.get_weight()) > data.get_max_carry_weight():
-                        await interaction.followup.send(f"***{player.get_name()}** tried to take off **{item.get_name()}**, but it couldn't fit into their inventory.*")
-                        return
-                    player.del_clothes(item)
-                    player.add_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** took off the item **{item.get_name()}**.*")
-                    return
+        if await helpers.check_room_exists(interaction, current_room):
+            return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+            return
 
-                if container.value == 1:
-                    if await helpers.check_room_exists(interaction, current_room):
-                        return
-                        
-                    player.del_clothes(item)
-                    current_room.add_item(item)
-                    data.save()
-                    await interaction.followup.send(f"***{player.get_name()}** took off and dropped the item **{item.get_name()}**.*")
-                    return
-            
-        await interaction.followup.send(f"*Could not find **{item_name}**. Please use `/clothes` to see the clothes you are wearing.*")
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
+
+        # Get variables necessary for future logic
+        item_list = player.get_clothes()
+        message_type = "undress"
+        destination = player
+
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, 1, message_type)
+        if found_items is None:
+            return
+
+        # Check if player is undressing into their inventory or the room
+        if container.value == 0:
+            if not await helpers.can_carry(interaction, found_items, player, message_type, 1):
+                return
+        if container.value == 1:
+            message_type = "undressroom"
+            destination = current_room
+
+        # Transfer the item from their inventory into the room
+        return await interaction.followup.send(helpers.transfer_item(player, destination, player, found_items, message_type, amount=1, is_clothes_source=True))
     #endregion
     #region /undressinto
     @app_commands.command(name = "undressinto", description = "Take off a clothing item and place it into an object.")
@@ -402,35 +296,37 @@ class ItemCMDs(commands.Cog):
     @app_commands.describe(item_name = "The clothing item you wish to drop.")
     @app_commands.autocomplete(object_name=autocompletes.object_autocomplete)
     @app_commands.autocomplete(item_name=autocompletes.clothing_autocomplete)
-    async def undressdrop(self,interaction: discord.Interaction, object_name: str, item_name: str):
-        await interaction.response.defer(thinking=True)
-        id = interaction.user.id
-        channel_id = interaction.channel_id
-        player = helpers.get_player_from_id(id)
-        current_room = helpers.get_room_from_id(channel_id)
+    async def undressinto(self,interaction: discord.Interaction, object_name: str, item_name: str):
+        # Get the player and room class objects for this interaciton
+        player = helpers.get_player_from_id(interaction.user.id)
+        current_room = helpers.get_room_from_id(interaction.channel_id)
 
+        # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
+            return
+        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
             return
-        
-        max_storage_amt = searched_obj.get_storage()
-        obj_contents = searched_obj.get_items()
+
+        # Defer the response while processing the code
+        await interaction.response.defer(thinking=True)
+
+        # Get the list of items 
         item_list = player.get_clothes()
 
-        for item in item_list:
-            if helpers.simplify_string(item_name) == helpers.simplify_string(item.get_name()):
-                if (len(obj_contents) + 1) > max_storage_amt and searched_obj.get_storage() != -1:
-                    await interaction.followup.send(f"***{player.get_name()}** tried to drop the item **{item.get_name()}** into the object **{searched_obj.get_name()}**, but there wasn't enough space.*")
-                    return
-                player.del_clothes(item)
-                searched_obj.add_item(item)
-                data.save()
-                await interaction.followup.send(f"***{player.get_name()}** dropped the item **{item.get_name()}** into **{searched_obj.get_name()}***.")
-                return
-        
-        await interaction.followup.send(f"*Could not find the item **{item_name}**. Please use `/clothes` to see the clothes you are wearing.*")
+        # Whittle the list down into matching items; return if there are none
+        found_items = await helpers.find_items_in_list(interaction, item_list, item_name, 1, "undressinto", None, True)
+        if found_items is None:
+            return
+
+        # Check if the object has enough space to fit the items
+        if not await helpers.can_store(interaction, player, searched_obj, found_items, "undressinto", 1):
+            return
+
+        # Transfer the item from the player's inventory into the object, send confirmation message
+        return await interaction.followup.send(helpers.transfer_item(player, searched_obj, player, found_items, "undressinto", 1, searched_obj, True))
     #endregion
 
 async def setup(bot: commands.Bot):
