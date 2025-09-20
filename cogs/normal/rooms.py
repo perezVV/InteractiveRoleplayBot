@@ -38,7 +38,7 @@ class RoomCMDs(commands.Cog):
 
         await interaction.followup.send(f"*{lookedAt}*:\n\n{topic}")
 #endregion
-    #region /goto TODO: post-AA, set previous read room perms to be neutral rather than false
+    #region /goto
     @app_commands.command(name = "goto", description = "Move to the room that you specify.")
     @app_commands.describe(room_name = "The name of the room you wish the move to.")
     @app_commands.autocomplete(room_name=autocompletes.exit_name_autocomplete)
@@ -127,7 +127,7 @@ class RoomCMDs(commands.Cog):
             await channel.send(f"***{player.get_name()}** entered.*")
 
         if currChannel is not None:
-            await currChannel.set_permissions(user, read_messages = False)
+            await currChannel.set_permissions(user, read_messages = None)
 
         await channel.set_permissions(user, read_messages = True)
     #endregion
