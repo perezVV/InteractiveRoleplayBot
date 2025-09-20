@@ -316,58 +316,6 @@ class AdminPlayerCMDs(commands.Cog):
         
         await interaction.followup.send(f"*All players dragged to **{room.get_name()}**.*")
     #endregion
-    #region /killplayer TODO: remove once /goto is fixed post-AA. currently a workaround
-    @app_commands.command(name = "killplayer", description = "Gives a player the ability to see every room. Usually used when swapping from player to spectator.")
-    @app_commands.describe(player_name = "The player you wish to add as a spectator.")
-    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
-    @app_commands.default_permissions()
-    async def killplayer(self, interaction: discord.Interaction, player_name: str):
-        await interaction.response.defer(thinking=True)
-        if len(data.roomdata) == 0:
-            await interaction.followup.send("There are currently no rooms.")
-            return
-        
-        player = helpers.get_player_from_name(player_name)
-
-        if player is None:
-            await interaction.followup.send(f"*Could not find the player **{player_name}**. Please use `/listplayers` to get a list of all current players.*")
-        
-        user = self.bot.get_user(int(player.get_id()))
-
-        for key in data.roomdata:
-            currRoom = data.roomdata[key]
-            channel = self.bot.get_channel(int(currRoom.get_id()))
-            await channel.set_permissions(user, read_messages = True)
-        
-        await interaction.followup.send(f"*Killed player **{player_name}**.*")
-    #endregion
-    #region /reviveplayer TODO: remove once /goto is fixed post-AA. currently a workaround
-    @app_commands.command(name = "reviveplayer", description = "Removes a player's ability to see every room. Usually used when swapping from spectator to player.")
-    @app_commands.describe(player_name = "The player you wish to bring back to the experience.")
-    @app_commands.autocomplete(player_name=autocompletes.admin_players_autocomplete)
-    @app_commands.default_permissions()
-    async def reviveplayer(self, interaction: discord.Interaction, player_name: str):
-        await interaction.response.defer(thinking=True)
-        if len(data.roomdata) == 0:
-            await interaction.followup.send("There are currently no rooms.")
-            return
-        
-        player = helpers.get_player_from_name(player_name)
-
-        if player is None:
-            await interaction.followup.send(f"*Could not find the player **{player_name}**. Please use `/listplayers` to get a list of all current players.*")
-        
-        user = self.bot.get_user(int(player.get_id()))
-
-        for key in data.roomdata:
-            currRoom = data.roomdata[key]
-            if currRoom.get_id() == player.get_room().get_id():
-                continue
-            channel = self.bot.get_channel(int(currRoom.get_id()))
-            await channel.set_permissions(user, read_messages = False)
-        
-        await interaction.followup.send(f"*Revived player **{player_name}**.*")
-    #endregion
     #region /editcarryweight
     @app_commands.command(name = "editcarryweight", description = "Change the maximum carry weight for every player's inventory or clothes.")
     @app_commands.choices(weight_to_change = [
