@@ -106,7 +106,7 @@ async def user_items_autocomplete(interaction: discord.Interaction, item_name: s
     
     if interaction.namespace.object_name == "__SHOW_MORE__":
         smart_autocomplete_list = []
-        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more objects.]", value="__EMPTY__"))
+        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more.]", value="__EMPTY__"))
         return smart_autocomplete_list
     
     player_items = player.get_items()
@@ -151,7 +151,7 @@ async def clothing_autocomplete(interaction: discord.Interaction, item_name: str
 
     if interaction.namespace.object_name == "__SHOW_MORE__":
         smart_autocomplete_list = []
-        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more objects.]", value="__EMPTY__"))
+        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more.]", value="__EMPTY__"))
         return smart_autocomplete_list
 
     playerClothes = player.get_clothes()
@@ -213,7 +213,7 @@ async def object_contents_autocomplete(interaction: discord.Interaction, item_na
     
     if interaction.namespace.object_name == "__SHOW_MORE__":
         smart_autocomplete_list = []
-        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more objects.]", value="__EMPTY__"))
+        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more.]", value="__EMPTY__"))
         return smart_autocomplete_list
 
     searchedObj = None
