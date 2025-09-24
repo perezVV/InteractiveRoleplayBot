@@ -27,7 +27,7 @@ class ItemCMDs(commands.Cog):
             return
         if await helpers.check_room_exists(interaction, current_room):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name):
             return
 
         # Defer the response while processing the code
@@ -62,7 +62,7 @@ class ItemCMDs(commands.Cog):
         # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name, object_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
@@ -101,7 +101,7 @@ class ItemCMDs(commands.Cog):
             return
         if await helpers.check_room_exists(interaction, current_room):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name):
             return
 
         # Defer the response while processing the code
@@ -132,7 +132,7 @@ class ItemCMDs(commands.Cog):
         # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name, object_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
@@ -173,7 +173,7 @@ class ItemCMDs(commands.Cog):
         # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name):
             return
 
         # Defer the response while processing the code
@@ -220,7 +220,7 @@ class ItemCMDs(commands.Cog):
         # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name, object_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:
@@ -263,7 +263,7 @@ class ItemCMDs(commands.Cog):
             return
         if await helpers.check_room_exists(interaction, current_room):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name):
             return
 
         # Defer the response while processing the code
@@ -304,7 +304,7 @@ class ItemCMDs(commands.Cog):
         # Validate the interaction and handle smart autocomplete cases
         if await helpers.check_valid_player(interaction, player):
             return
-        if await helpers.handle_smart_autocomplete(interaction, "item", item_name):
+        if await helpers.handle_smart_autocomplete(interaction, item_name, object_name):
             return
         searched_obj = await helpers.check_obj_container(interaction, current_room, object_name, player)
         if searched_obj is None:

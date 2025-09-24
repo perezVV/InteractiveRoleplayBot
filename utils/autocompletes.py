@@ -92,7 +92,7 @@ async def players_autocomplete(interaction: discord.Interaction, player_name: st
     ]
     if player_name:
         choices = [choice for choice in choices if player_name.lower() in choice.name.lower()]
-    
+
     return await helpers.choice_limit(interaction, "player", choices)
 #endregion
 
@@ -103,6 +103,11 @@ async def user_items_autocomplete(interaction: discord.Interaction, item_name: s
 
     if await helpers.check_valid_player(interaction, player):
         return
+    
+    if interaction.namespace.object_name == "__SHOW_MORE__":
+        smart_autocomplete_list = []
+        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more objects.]", value="__EMPTY__"))
+        return smart_autocomplete_list
     
     player_items = player.get_items()
 
@@ -143,6 +148,11 @@ async def clothing_autocomplete(interaction: discord.Interaction, item_name: str
 
     if player is None or player.get_name() not in data.playerdata.keys():
         return []
+
+    if interaction.namespace.object_name == "__SHOW_MORE__":
+        smart_autocomplete_list = []
+        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more objects.]", value="__EMPTY__"))
+        return smart_autocomplete_list
 
     playerClothes = player.get_clothes()
 
@@ -200,6 +210,11 @@ async def object_contents_autocomplete(interaction: discord.Interaction, item_na
 
     if currRoom is None:
         return []
+    
+    if interaction.namespace.object_name == "__SHOW_MORE__":
+        smart_autocomplete_list = []
+        smart_autocomplete_list.append(app_commands.Choice(name="[Proceed to show more objects.]", value="__EMPTY__"))
+        return smart_autocomplete_list
 
     searchedObj = None
     for object in currRoom.get_objects():
@@ -290,7 +305,7 @@ async def admin_exit_autocomplete(interaction: discord.Interaction, room_two_nam
 
     if room_two_name:
         choices = [choice for choice in choices if room_two_name.lower() in choice.name.lower()]
-    
+
     return await helpers.choice_limit(interaction, "exits", choices)
 #endregion
 

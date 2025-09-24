@@ -308,22 +308,28 @@ async def choice_limit(interaction: discord.Interaction, element_type: str, choi
     visible.append(app_commands.Choice(name=more_label, value="__SHOW_MORE__"))
 
     async with hidden_items_lock:
-        hidden_items_cache[(interaction.user.id, interaction.channel_id)] = hidden
+        hidden_items_cache[(interaction.user.id, interaction.channel_id)] = {
+            "hidden": hidden,
+            "element_type": element_type
+        }
 
     return visible
 #endregion
 #region Handle smart autocomplete
-async def handle_smart_autocomplete(interaction: discord.Interaction, element_type: str, value: str) -> bool:
-    if value != "__SHOW_MORE__":
+async def handle_smart_autocomplete(interaction: discord.Interaction, value: str, extra_value: str = "") -> bool:
+    if value and extra_value != "__SHOW_MORE__":
         return False
     
     async with hidden_items_lock:
-        hidden = hidden_items_cache.get((interaction.user.id, interaction.channel_id), [])
+        cache = hidden_items_cache.get((interaction.user.id, interaction.channel_id), [])
     
-    if not hidden:
-        await interaction.response.send_message("*No more {element_type}s to show.*", ephemeral=True)
+    if not cache:
+        await interaction.response.send_message("*No more options to show.*", ephemeral=True)
         return True
     
+    hidden = cache["hidden"]
+    element_type = cache["element_type"]
+
     hidden_names = "\n- ".join(f"`{choice.name}`" for choice in hidden)
     await interaction.response.send_message(f"*Remaining {element_type}s:*\n\n- {hidden_names}", ephemeral=True)
 
