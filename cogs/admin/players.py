@@ -270,7 +270,7 @@ class AdminPlayerCMDs(commands.Cog):
             await channel.send(f"***{player.get_name()}** entered the room.*")
 
         if prevChannel is not None:
-            await prevChannel.set_permissions(user, read_messages = False)
+            await prevChannel.set_permissions(user, read_messages = None)
 
         await channel.set_permissions(user, read_messages = True)
     #endregion 
@@ -310,7 +310,7 @@ class AdminPlayerCMDs(commands.Cog):
                 await interaction.followup.send(f"*Could not find the user <@{player.get_id()}>. Is there an error in the ID?*")
 
             if prevChannel is not None:
-                await prevChannel.set_permissions(user, read_messages = False)
+                await prevChannel.set_permissions(user, read_messages = None)
             
             await channel.set_permissions(user, read_messages = True)
         
