@@ -1,9 +1,13 @@
+import asyncio
+import os
+import ssl
+from pathlib import Path
+
+import aiohttp
+import certifi
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from pathlib import Path
-import os
-
 
 os.environ["BASE_PATH"] = Path(__file__).parent.resolve().as_posix()
 
@@ -59,6 +63,24 @@ client = Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'Logged on as {client.user}!')
+    print(f"Logged on as {client.user}!")
 
-client.run(os.environ['token'])
+async def main():
+    # fix for older systems with outdated ca certificates
+    # note: discord.py does have a parameter in Client(...) for passing
+    # connectors, but since connectors need to be made while the loop is
+    # running, we have to set it after the Client is made, resulting
+    # in this slight mess
+
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    connector = aiohttp.TCPConnector(ssl=ssl_context)
+
+    client.http.connector = connector
+
+    async with client:
+        await client.start(os.environ["token"])
+
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    pass
